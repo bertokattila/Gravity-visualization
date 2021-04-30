@@ -458,8 +458,8 @@ class GravitySheet : public ParamSurface {
 public:
 	GravitySheet() { create(); }
 	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		X = U;
-		Y = V;
+		X = U * 2 - 1;
+		Y = V * 2 - 1;
 		Z = 0;
 	}
 };
@@ -623,7 +623,18 @@ struct SphereObject : public Object{
 		translation = position;
 		//printf("x %f y %f z %f\n", position.x, position.y, position.z);
 	}
+};
 
+struct GravitySheetObject : public Object {
+	vec3 position = vec3(-1, -1, 0);
+	
+	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {
+
+	}
+	bool active = false;
+	void Animate(float tstart, float tend) {
+		
+	}
 };
 
 //---------------------------
@@ -668,7 +679,7 @@ public:
 		sphereObject1->translation = vec3(0, 0, 0);
 		//objects.push_back(sphereObject1);
 
-		Object* gravitySheetObject = new Object(phongShader, material0, gravitySheet);
+		GravitySheetObject* gravitySheetObject = new GravitySheetObject(phongShader, material0, gravitySheet);
 		gravitySheetObject->translation = vec3(0, 0, 0);
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
