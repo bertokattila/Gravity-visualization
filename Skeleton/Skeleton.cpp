@@ -224,12 +224,12 @@ class PhongShader : public Shader {
 
 		layout(location = 0) in vec3  vtxPos;            // pos in modeling space
 		layout(location = 1) in vec3  vtxNorm;      	 // normal in modeling space
-		layout(location = 2) in vec2  vtxUV;
+		
 
 		out vec3 wNormal;		    // normal in world space
 		out vec3 wView;             // view in world space
 		out vec3 wLight[8];		    // light dir in world space
-		out vec2 texcoord;
+		
 
 		void main() {
 			gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
@@ -240,7 +240,7 @@ class PhongShader : public Shader {
 			}
 		    wView  = wEye * wPos.w - wPos.xyz;
 		    wNormal = (Minv * vec4(vtxNorm, 0)).xyz;
-		    texcoord = vtxUV;
+		    
 		}
 	)";
 
@@ -262,12 +262,11 @@ class PhongShader : public Shader {
 		uniform Material material;
 		uniform Light[8] lights;    // light sources 
 		uniform int   nLights;
-		uniform sampler2D diffuseTexture;
 
 		in  vec3 wNormal;       // interpolated world sp normal
 		in  vec3 wView;         // interpolated world sp view
 		in  vec3 wLight[8];     // interpolated world sp illum dir
-		in  vec2 texcoord;
+		
 		
         out vec4 fragmentColor; // output goes to frame buffer
 
@@ -275,9 +274,9 @@ class PhongShader : public Shader {
 			vec3 N = normalize(wNormal);
 			vec3 V = normalize(wView); 
 			if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces like Mobius or Klein
-			vec3 texColor = texture(diffuseTexture, texcoord).rgb;
-			vec3 ka = material.ka * texColor;
-			vec3 kd = material.kd * texColor;
+		
+			vec3 ka = material.ka;
+			vec3 kd = material.kd;
 
 			vec3 radiance = vec3(0, 0, 0);
 			for(int i = 0; i < nLights; i++) {
@@ -286,7 +285,7 @@ class PhongShader : public Shader {
 				float cost = max(dot(N,L), 0), cosd = max(dot(N,H), 0);
 				// kd and ka are modulated by the texture
 				radiance += ka * lights[i].La + 
-                           (kd * texColor * cost + material.ks * pow(cosd, material.shininess)) * lights[i].Le;
+                           (kd * cost + material.ks * pow(cosd, material.shininess)) * lights[i].Le;
 			}
 			fragmentColor = vec4(radiance, 1);
 		}
@@ -300,7 +299,7 @@ public:
 		setUniform(state.M, "M");
 		setUniform(state.Minv, "Minv");
 		setUniform(state.wEye, "wEye");
-		setUniform(*state.texture, std::string("diffuseTexture"));
+		
 		setUniformMaterial(*state.material, "material");
 
 		setUniform((int)state.lights.size(), "nLights");
@@ -568,15 +567,15 @@ struct Object {
 	//---------------------------
 	Shader* shader;
 	Material* material;
-	Texture* texture;
+	
 	Geometry* geometry;
 	vec3 scale, translation, rotationAxis;
 	float rotationAngle;
 public:
-	Object(Shader* _shader, Material* _material, Texture* _texture, Geometry* _geometry) :
+	Object(Shader* _shader, Material* _material, Geometry* _geometry) :
 		scale(vec3(1, 1, 1)), translation(vec3(0, 0, 0)), rotationAxis(0, 0, 1), rotationAngle(0) {
 		shader = _shader;
-		texture = _texture;
+		
 		material = _material;
 		geometry = _geometry;
 	}
@@ -593,7 +592,7 @@ public:
 		state.Minv = Minv;
 		state.MVP = state.M * state.V * state.P;
 		state.material = material;
-		state.texture = texture;
+		
 		shader->Bind(state);
 		geometry->Draw();
 	}
@@ -605,17 +604,22 @@ struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 velocity = vec3(0, 0, 0);
 	float radius = 0;
-	SphereObject(Shader* _shader, Material* _material, Texture* _texture, Geometry* _geometry, vec3 velocity, vec3 scale) : Object(_shader, _material, _texture, _geometry) {
+	SphereObject(Shader* _shader, Material* _material, Geometry* _geometry, vec3 velocity, vec3 scale) : Object(_shader, _material, _geometry) {
 		this->velocity = velocity;
 		this->scale = scale;
 		radius = 1.0f * scale.x;
-		printf("%f", scale.x);
+		
 		position = vec3(-1.0 + radius, -1.0 + radius, radius);
 	}
 	bool active = false;
 	void Animate(float tstart, float tend) { 
-		
 		position = position + velocity * (tend - tstart);
+
+		if (position.x > 1 + radius) position.x = -1 - radius;
+		if (position.x < -1 - radius) position.x = 1 + radius;
+		if (position.y > 1 + radius) position.y = -1 - radius;
+		if (position.y < -1 - radius) position.y = 1 + radius;
+
 		translation = position;
 		//printf("x %f y %f z %f\n", position.x, position.y, position.z);
 	}
@@ -646,12 +650,9 @@ public:
 		material1->kd = vec3(0.8f, 0.6f, 0.4f);
 		material1->ks = vec3(0.3f, 0.3f, 0.3f);
 		material1->ka = vec3(0.2f, 0.2f, 0.2f);
-		material1->shininess = 30;
+		material1->shininess = 100;
 
-		// Textures
-		Texture* texture4x8 = new CheckerBoardTexture(4, 8);
-		Texture* texture15x20 = new CheckerBoardTexture(15, 20);
-
+	
 		// Geometries
 		Geometry* sphere = new Sphere();
 		Geometry* gravitySheet = new GravitySheet();
@@ -663,42 +664,42 @@ public:
 		Geometry* dini = new Dini();
 
 		// Create objects by setting up their vertex data on the GPU
-		Object* sphereObject1 = new SphereObject(phongShader, material0, texture15x20, sphere, vec3(0.2, 0.2, 0.2), vec3(0.05f, 0.05f, 0.05f));
+		Object* sphereObject1 = new SphereObject(phongShader, material0, sphere, vec3(0.2, 0.2, 0.2), vec3(0.05f, 0.05f, 0.05f));
 		sphereObject1->translation = vec3(0, 0, 0);
-		objects.push_back(sphereObject1);
+		//objects.push_back(sphereObject1);
 
-		Object* gravitySheetObject = new Object(phongShader, material0, texture15x20, gravitySheet);
+		Object* gravitySheetObject = new Object(phongShader, material0, gravitySheet);
 		gravitySheetObject->translation = vec3(0, 0, 0);
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
 
 		// Create objects by setting up their vertex data on the GPU
-		Object* tractiObject1 = new Object(phongShader, material0, texture15x20, tractricoid);
+		Object* tractiObject1 = new Object(phongShader, material0, tractricoid);
 		tractiObject1->translation = vec3(-6, 3, 0);
 		tractiObject1->rotationAxis = vec3(1, 0, 0);
 		//objects.push_back(tractiObject1);
 
-		Object* torusObject1 = new Object(phongShader, material0, texture4x8, torus);
+		Object* torusObject1 = new Object(phongShader, material0, torus);
 		torusObject1->translation = vec3(-3, 3, 0);
 		torusObject1->scale = vec3(0.7f, 0.7f, 0.7f);
 		torusObject1->rotationAxis = vec3(1, 0, 0);
 		//objects.push_back(torusObject1);
 
-		Object* mobiusObject1 = new Object(phongShader, material0, texture4x8, mobius);
+		Object* mobiusObject1 = new Object(phongShader, material0, mobius);
 		mobiusObject1->translation = vec3(0, 3, 0);
 		mobiusObject1->scale = vec3(0.7f, 0.7f, 0.7f);
 		mobiusObject1->rotationAxis = vec3(1, 0, 0);
 		//objects.push_back(mobiusObject1);
 
-		Object* kleinObject1 = new Object(phongShader, material1, texture4x8, klein);
+		Object* kleinObject1 = new Object(phongShader, material1, klein);
 		kleinObject1->translation = vec3(3, 3, 0);
 		//objects.push_back(kleinObject1);
 
-		Object* boyObject1 = new Object(phongShader, material1, texture15x20, boy);
+		Object* boyObject1 = new Object(phongShader, material1, boy);
 		boyObject1->translation = vec3(6, 3, 0);
 		//objects.push_back(boyObject1);
 
-		Object* diniObject1 = new Object(phongShader, material1, texture15x20, dini);
+		Object* diniObject1 = new Object(phongShader, material1, dini);
 		diniObject1->translation = vec3(9, 3, 0);
 		diniObject1->scale = vec3(0.7f, 0.7f, 0.7f);
 		diniObject1->rotationAxis = vec3(1, 0, 0);
@@ -757,17 +758,19 @@ public:
 		sphereObjectToStart->velocity = velocity;
 		addNewSphere();
 	}
+	float random() {
+		return (float)rand() / (float)RAND_MAX;
+	}
 	void addNewSphere() {
 		Shader* phongShader = new PhongShader();
 		Geometry* sphere = new Sphere();
-		Material* material0 = new Material;
-		material0->kd = vec3(0.6f, 0.4f, 0.2f);
-		material0->ks = vec3(4, 4, 4);
-		material0->ka = vec3(0.1f, 0.1f, 0.1f);
-		material0->shininess = 100;
-		Texture* texture15x20 = new CheckerBoardTexture(15, 20);
+		Material* material = new Material;
+		material->kd = vec3(random(), random(), random());
+		material->ks = vec3(4, 4, 4);
+		material->ka = vec3(0.1f, 0.1f, 0.1f);
+		material->shininess = 100;
 
-		SphereObject* sphereObject = new SphereObject(phongShader, material0, texture15x20, sphere, vec3(0,0,0), vec3(0.05f, 0.05f, 0.05f));
+		SphereObject* sphereObject = new SphereObject(phongShader, material, sphere, vec3(0,0,0), vec3(0.05f, 0.05f, 0.05f));
 		sphereObject->translation = vec3(0, 0, 0);
 		
 		sphereObjectToStart = sphereObject;
