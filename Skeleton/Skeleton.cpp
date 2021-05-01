@@ -521,6 +521,16 @@ public:
 		}
 		return normalize(vec3(-Z.d.x, -Z.d.y, 1));
 	}
+	float getZ(vec2 from) {
+		Dnum2 X(from.x, vec2(1, 0));
+		Dnum2 Y(from.y, vec2(0, 1));
+		Dnum2 Z = 0;
+		for (int i = 0; i < masses.size(); i++)
+		{
+			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.02, -1) * masses.at(i).weight * -1;
+		}
+		return Z.f;
+	}
 };
 
 //---------------------------
@@ -659,20 +669,44 @@ public:
 	virtual void Animate(float tstart, float tend) { rotationAngle = 0.8f * tend; }
 };
 
+
+struct GravitySheetObject : public Object {
+	std::vector<Mass> masses;
+	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {
+
+	}
+	void Animate(float tstart, float tend) {
+
+	}
+	void addMass(Mass mass) {
+		masses.push_back(mass);
+		((GravitySheet*)geometry)->masses.push_back(mass);
+		((GravitySheet*)geometry)->create();
+		//Draw();
+
+	}
+};
+
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
+	vec3 centerPosition = vec3(0, 0, 0);
 	vec3 velocity = vec3(0, 0, 0);
 	float radius = 0;
 	Camera* attachedCamera = NULL;
-	SphereObject(Shader* _shader, Material* _material, Geometry* _geometry, vec3 velocity, vec3 scale) : Object(_shader, _material, _geometry) {
+	GravitySheetObject* gravitySheetObject;
+	SphereObject(Shader* _shader, Material* _material, Geometry* _geometry, vec3 velocity, vec3 scale, GravitySheetObject* gravityObj) : Object(_shader, _material, _geometry) {
 		this->velocity = velocity;
 		this->scale = scale;
 		radius = 1.0f * scale.x;
-		position = vec3(-1.0 + radius, -1.0 + radius, radius);
+		centerPosition = vec3(-1.0 + radius, -1.0 + radius, radius);
+		position = vec3(-1.0 + radius, -1.0 + radius, 0);
+		gravitySheetObject = gravityObj;
 	}
 	bool active = false;
 	void Animate(float tstart, float tend) { 
 		position = position + velocity * (tend - tstart);
+		position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y)); ///
 
 		if (position.x > 1 + radius) position.x = -1 - radius;
 		if (position.x < -1 - radius) position.x = 1 + radius;
@@ -681,18 +715,19 @@ struct SphereObject : public Object{
 
 		if (attachedCamera != NULL && active) {
 			vec3 normalizedVelocity = normalize(velocity);
-			attachedCamera->wEye = position + normalizedVelocity * 0.01 + vec3(0, 0, 0.04);
-			attachedCamera->wLookat = position + velocity;
+			attachedCamera->wEye = centerPosition + normalizedVelocity * 0.01 + vec3(0, 0, 0.04);
+			attachedCamera->wLookat = centerPosition + velocity;
 			//printf("x %f y %f z %f\n", attachedCamera->wEye.x, attachedCamera->wEye.y, attachedCamera->wEye.z);
 			//printf("x %f y %f z %f\n", attachedCamera->wLookat.x, attachedCamera->wLookat.y, attachedCamera->wLookat.z);
 		}
 
-		translation = position;
+		centerPosition = position + radius * positionNormal;
+		translation = centerPosition;
 		
 	}
 	void attachCamera(Camera* camera) {
 		attachedCamera = camera;
-		attachedCamera->wEye = position + vec3(0.01, 0.01, 0.04);
+		attachedCamera->wEye = centerPosition + vec3(0.01, 0.01, 0.04);
 		attachedCamera->wLookat = vec3(1,1,0);
 	}
 	void removeCamera() {
@@ -700,25 +735,6 @@ struct SphereObject : public Object{
 	}
 };
 
-
-
-struct GravitySheetObject : public Object {
-	
-	std::vector<Mass> masses;
-	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {
-
-	}
-	void Animate(float tstart, float tend) {
-		
-	}
-	void addMass(Mass mass) {
-		masses.push_back(mass);
-		((GravitySheet*)geometry)->masses.push_back(mass);
-		((GravitySheet*)geometry)->create();
-		//Draw();
-		
-	}
-};
 
 //---------------------------
 class Scene {
@@ -762,8 +778,8 @@ public:
 		Geometry* dini = new Dini();
 
 		// Create objects by setting up their vertex data on the GPU
-		Object* sphereObject1 = new SphereObject(phongShader, material0, sphere, vec3(0.2, 0.2, 0.2), vec3(0.05f, 0.05f, 0.05f));
-		sphereObject1->translation = vec3(0, 0, 0);
+		//Object* sphereObject1 = new SphereObject(phongShader, material0, sphere, vec3(0.2, 0.2, 0.2), vec3(0.05f, 0.05f, 0.05f));
+		//sphereObject1->translation = vec3(0, 0, 0);
 		//objects.push_back(sphereObject1);
 
 		gravitySheetObject = new GravitySheetObject(phongShader, material0, gravitySheet);
@@ -880,7 +896,7 @@ public:
 		material->ka = vec3(0.1f, 0.1f, 0.1f);
 		material->shininess = 100;
 
-		SphereObject* sphereObject = new SphereObject(phongShader, material, sphere, vec3(0,0,0), vec3(0.05f, 0.05f, 0.05f));
+		SphereObject* sphereObject = new SphereObject(phongShader, material, sphere, vec3(0,0,0), vec3(0.05f, 0.05f, 0.05f), gravitySheetObject);
 		sphereObject->translation = vec3(0, 0, 0);
 		
 		sphereObjectToStart = sphereObject;
