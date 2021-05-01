@@ -441,6 +441,8 @@ public:
 	}
 
 	void create(int N = tessellationLevel, int M = tessellationLevel) {
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		nVtxPerStrip = (M + 1) * 2;
 		nStrips = N;
 		std::vector<VertexData> vtxData;	// vertices on the CPU
@@ -478,15 +480,33 @@ public:
 	}
 };
 
+struct Mass {
+	float weight;
+	vec2 position;
+
+	Mass(float w, vec2 pos) {
+		this->weight = w;
+		this->position = pos;
+	}
+};
+
 class GravitySheet : public ParamSurface {
 	//---------------------------
 public:
 	GravitySheet() { create(); }
+	std::vector<Mass> masses;
+	
 	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
 		X = U * 2 - 1;
 		Y = V * 2 - 1;
+		for (int i = 0; i < masses.size(); i++)
+		{
+			printf("x %f y %f z %f\n", masses.at(i).position.x, masses.at(i).position.x, masses.at(i).weight);
+		}
+		
 		Z = 0;
 	}
+
 };
 
 //---------------------------
@@ -666,14 +686,29 @@ struct SphereObject : public Object{
 	}
 };
 
+
+
 struct GravitySheetObject : public Object {
-	vec3 position = vec3(-1, -1, 0);
 	
+	std::vector<Mass> masses;
 	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {
 
 	}
 	bool active = false;
 	void Animate(float tstart, float tend) {
+		for (size_t i = 0; i < masses.size(); i++)
+		{
+		
+			
+		}
+		//printf("\n");
+		
+	}
+	void addMass(Mass mass) {
+		masses.push_back(mass);
+		((GravitySheet*)geometry)->masses.push_back(mass);
+		((GravitySheet*)geometry)->create();
+		//Draw();
 		
 	}
 };
@@ -687,7 +722,9 @@ class Scene {
 	bool folowingSpere = false;
 	std::vector<Light> lights;
 public:
+	GravitySheetObject* gravitySheetObject;
 	void Build() {
+
 		// Shaders
 		Shader* phongShader = new PhongShader();
 		Shader* gouraudShader = new GouraudShader();
@@ -722,7 +759,7 @@ public:
 		sphereObject1->translation = vec3(0, 0, 0);
 		//objects.push_back(sphereObject1);
 
-		GravitySheetObject* gravitySheetObject = new GravitySheetObject(phongShader, material0, gravitySheet);
+		gravitySheetObject = new GravitySheetObject(phongShader, material0, gravitySheet);
 		gravitySheetObject->translation = vec3(0, 0, 0);
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
@@ -884,12 +921,18 @@ void onKeyboard(unsigned char key, int pX, int pY) {
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
 
 // Mouse click event
+float weightCounter = 0;
 void onMouse(int button, int state, int pX, int pY) {
 	if (state) return;
 	pY = -1 * (pY - windowHeight);
-	float velocityX = (float)pX / (float)windowWidth;
-	float velocityY = (float)pY / (float)windowHeight;
-	scene.startNewSphere(vec3(velocityX, velocityY, 0));
+	float normalizedX = (float)pX / (float)windowWidth;
+	float normalizedY = (float)pY / (float)windowHeight;
+	if (!button) {
+		scene.startNewSphere(vec3(normalizedX, normalizedY, 0));
+	}
+	else {
+		scene.gravitySheetObject->addMass(Mass(++weightCounter, vec2(normalizedX, normalizedY)));
+	}
 	
 	//printf("x %f y %f\n", worldX, worldY);
 }
