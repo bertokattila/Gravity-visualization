@@ -818,6 +818,7 @@ public:
 	}
 
 	SphereObject* sphereObjectToStart = NULL;
+	SphereObject* sphereObjectCameraOwner = NULL;
 	void startNewSphere(vec3 velocity) {
 		sphereObjectToStart->velocity = velocity;
 		sphereObjectToStart->active = true;
@@ -844,6 +845,11 @@ public:
 	void switchCamera() {
 		if (!folowingSpere) {
 			sphereObjectToStart->attachCamera(&folowerCamera);
+			sphereObjectCameraOwner = sphereObjectToStart;
+		}
+		else
+		{
+			sphereObjectCameraOwner->removeCamera();
 		}
 		folowingSpere = !folowingSpere;
 	}
