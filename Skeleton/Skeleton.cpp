@@ -40,7 +40,7 @@ template<class T> Dnum<T> Pow(Dnum<T> g, float n) {
 
 typedef Dnum<vec2> Dnum2;
 
-const int tessellationLevel = 20;
+const int tessellationLevel = 200;
 
 
 struct Camera { // 3D camera
@@ -76,7 +76,7 @@ public:
 	SceneCamera() {
 		asp = (float)windowWidth / windowHeight;
 		fov = 75.0f * (float)M_PI / 180.0f;
-		fp = 1; bp = 20;
+		fp = 1; bp = 50;
 	}
 	mat4 V() { // view matrix: translates the center to the origin
 		vec3 w = normalize(wEye - wLookat);
@@ -490,6 +490,10 @@ struct Mass {
 	}
 };
 
+float distance2D(vec2 p1, vec2 p2) {
+	return sqrtf(powf(p1.x - p2.x, 2) + powf(p1.y - p2.y, 2));
+}
+
 class GravitySheet : public ParamSurface {
 	//---------------------------
 public:
@@ -499,14 +503,13 @@ public:
 	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
 		X = U * 2 - 1;
 		Y = V * 2 - 1;
-		for (int i = 0; i < masses.size(); i++)
-		{
-			printf("x %f y %f z %f\n", masses.at(i).position.x, masses.at(i).position.x, masses.at(i).weight);
-		}
-		
 		Z = 0;
+		float h = 0;
+		for (int i = 0; i < masses.size(); i++)
+		{		
+			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.02, -1) * masses.at(i).weight * -1;	
+		}
 	}
-
 };
 
 //---------------------------
@@ -931,7 +934,8 @@ void onMouse(int button, int state, int pX, int pY) {
 		scene.startNewSphere(vec3(normalizedX, normalizedY, 0));
 	}
 	else {
-		scene.gravitySheetObject->addMass(Mass(++weightCounter, vec2(normalizedX, normalizedY)));
+		weightCounter += 0.01;
+		scene.gravitySheetObject->addMass(Mass(weightCounter, vec2(normalizedX *2 -1, normalizedY * 2 -1)));
 	}
 	
 	//printf("x %f y %f\n", worldX, worldY);
