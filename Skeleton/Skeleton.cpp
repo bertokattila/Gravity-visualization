@@ -667,6 +667,7 @@ public:
 	}
 
 	virtual void Animate(float tstart, float tend) { rotationAngle = 0.8f * tend; }
+	virtual bool shouldBeRemoved() { return false; }
 };
 
 
@@ -685,6 +686,7 @@ struct GravitySheetObject : public Object {
 		//Draw();
 
 	}
+	bool shouldBeRemoved() { return false; }
 };
 
 struct SphereObject : public Object{
@@ -715,6 +717,7 @@ struct SphereObject : public Object{
 
 			position = position + velocity * dt;
 			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
 		if (position.x > 1 + radius) {
@@ -751,6 +754,9 @@ struct SphereObject : public Object{
 		translation = centerPosition;
 		
 	}
+	bool shouldBeRemoved() {
+		//printf("pos %f\n", position.z);
+		return position.z < -0.2; }
 	void attachCamera(Camera* camera) {
 		attachedCamera = camera;
 		attachedCamera->wEye = centerPosition + vec3(0.01, 0.01, 0.04);
@@ -765,12 +771,13 @@ struct SphereObject : public Object{
 //---------------------------
 class Scene {
 	//---------------------------
-	std::vector<Object*> objects;
+	
 	SceneCamera camera;
 	Camera folowerCamera;
 	bool folowingSpere = false;
 	std::vector<Light> lights;
 public:
+	std::vector<Object*> objects;
 	GravitySheetObject* gravitySheetObject;
 	void Build() {
 
@@ -900,7 +907,15 @@ public:
 	}
 
 	void Animate(float tstart, float tend) {
-		for (Object* obj : objects) obj->Animate(tstart, tend);
+		for (int i = 0; i < objects.size(); i++)
+		{
+			objects.at(i)->Animate(tstart, tend);
+			if (objects.at(i)->shouldBeRemoved()) {
+				objects.erase(objects.begin() + i);
+			}
+			
+		}
+
 	}
 
 	SphereObject* sphereObjectToStart = NULL;
