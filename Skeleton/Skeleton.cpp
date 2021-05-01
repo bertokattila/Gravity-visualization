@@ -42,13 +42,38 @@ typedef Dnum<vec2> Dnum2;
 
 const int tessellationLevel = 20;
 
-//---------------------------
+
 struct Camera { // 3D camera
 //---------------------------
 	vec3 wEye, wLookat, wVup;   // extrinsic
 	float fov, asp, fp, bp;		// intrinsic
 public:
 	Camera() {
+		asp = (float)windowWidth / windowHeight;
+		fov = 75.0f * (float)M_PI / 180.0f;
+		fp = 0.1; bp = 20;
+	}
+	mat4 V() { // view matrix: translates the center to the origin
+		vec3 w = normalize(wEye - wLookat);
+		vec3 u = normalize(cross(wVup, w));
+		vec3 v = cross(w, u);
+		return TranslateMatrix(wEye * (-1)) * mat4(u.x, v.x, w.x, 0,
+			u.y, v.y, w.y, 0,
+			u.z, v.z, w.z, 0,
+			0, 0, 0, 1);
+	}
+
+	mat4 P() { // projection matrix
+		return mat4(1 / (tan(fov / 2) * asp), 0, 0, 0,
+			0, 1 / tan(fov / 2), 0, 0,
+			0, 0, -(fp + bp) / (bp - fp), -1,
+			0, 0, -2 * fp * bp / (bp - fp), 0);
+	}
+};
+
+struct SceneCamera : Camera { // 3D camera
+public:
+	SceneCamera() {
 		asp = (float)windowWidth / windowHeight;
 		fov = 75.0f * (float)M_PI / 180.0f;
 		fp = 1; bp = 20;
@@ -63,11 +88,11 @@ public:
 			0, 0, 0, 1);
 	}
 
-	mat4 P() { // projection matrix
+	mat4 P() {
 		return mat4(1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, -2 / (bp - fp), 0,
-					0, 0, 0 , 1);
+			0, 1, 0, 0,
+			0, 0, -2 / (bp - fp), 0,
+			0, 0, 0, 1);
 	}
 };
 
@@ -604,11 +629,11 @@ struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 velocity = vec3(0, 0, 0);
 	float radius = 0;
+	Camera* attachedCamera = NULL;
 	SphereObject(Shader* _shader, Material* _material, Geometry* _geometry, vec3 velocity, vec3 scale) : Object(_shader, _material, _geometry) {
 		this->velocity = velocity;
 		this->scale = scale;
 		radius = 1.0f * scale.x;
-		
 		position = vec3(-1.0 + radius, -1.0 + radius, radius);
 	}
 	bool active = false;
@@ -620,8 +645,24 @@ struct SphereObject : public Object{
 		if (position.y > 1 + radius) position.y = -1 - radius;
 		if (position.y < -1 - radius) position.y = 1 + radius;
 
+		if (attachedCamera != NULL && active) {
+			vec3 normalizedVelocity = normalize(velocity);
+			attachedCamera->wEye = position + normalizedVelocity * 0.01 + vec3(0, 0, 0.04);
+			attachedCamera->wLookat = position + velocity;
+			//printf("x %f y %f z %f\n", attachedCamera->wEye.x, attachedCamera->wEye.y, attachedCamera->wEye.z);
+			//printf("x %f y %f z %f\n", attachedCamera->wLookat.x, attachedCamera->wLookat.y, attachedCamera->wLookat.z);
+		}
+
 		translation = position;
-		//printf("x %f y %f z %f\n", position.x, position.y, position.z);
+		
+	}
+	void attachCamera(Camera* camera) {
+		attachedCamera = camera;
+		attachedCamera->wEye = position + vec3(0.01, 0.01, 0.04);
+		attachedCamera->wLookat = vec3(1,1,0);
+	}
+	void removeCamera() {
+		attachedCamera = NULL;
 	}
 };
 
@@ -641,7 +682,9 @@ struct GravitySheetObject : public Object {
 class Scene {
 	//---------------------------
 	std::vector<Object*> objects;
-	Camera camera; // 3D camera
+	SceneCamera camera;
+	Camera folowerCamera;
+	bool folowingSpere = false;
 	std::vector<Light> lights;
 public:
 	void Build() {
@@ -734,6 +777,8 @@ public:
 		camera.wLookat = vec3(0, 0, 0);
 		camera.wVup = vec3(0, 1, 0);
 
+		folowerCamera.wVup = vec3(0, 0, 1);
+
 		// Lights
 		lights.resize(3);
 		lights[0].wLightPos = vec4(5, 5, 4, 0);	// ideal point -> directional light source
@@ -753,9 +798,17 @@ public:
 
 	void Render() {
 		RenderState state;
-		state.wEye = camera.wEye;
-		state.V = camera.V();
-		state.P = camera.P();
+		if (folowingSpere) {
+			state.wEye = folowerCamera.wEye;
+			state.V = folowerCamera.V();
+			state.P = folowerCamera.P();
+		}
+		else {
+			state.wEye = camera.wEye;
+			state.V = camera.V();
+			state.P = camera.P();
+		}
+		
 		state.lights = lights;
 		for (Object* obj : objects) obj->Draw(state);
 	}
@@ -767,6 +820,7 @@ public:
 	SphereObject* sphereObjectToStart = NULL;
 	void startNewSphere(vec3 velocity) {
 		sphereObjectToStart->velocity = velocity;
+		sphereObjectToStart->active = true;
 		addNewSphere();
 	}
 	float random() {
@@ -786,6 +840,12 @@ public:
 		
 		sphereObjectToStart = sphereObject;
 		objects.push_back(sphereObject);
+	}
+	void switchCamera() {
+		if (!folowingSpere) {
+			sphereObjectToStart->attachCamera(&folowerCamera);
+		}
+		folowingSpere = !folowingSpere;
 	}
 };
 
@@ -808,7 +868,11 @@ void onDisplay() {
 }
 
 // Key of ASCII code pressed
-void onKeyboard(unsigned char key, int pX, int pY) { }
+void onKeyboard(unsigned char key, int pX, int pY) { 
+	if (key == ' ') {
+		scene.switchCamera();
+	}
+}
 
 // Key of ASCII code released
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
