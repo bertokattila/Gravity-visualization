@@ -705,19 +705,18 @@ struct SphereObject : public Object{
 		gravitySheetObject = gravityObj;
 	}
 	void Animate(float tstart, float tend) { 
-		float dt = (tend - tstart);
-
-		
 		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		if (active) {
+			float dt = (tend - tstart);
 
-		vec3 force = gravity - dot(gravity, positionNormal) * positionNormal;
+			vec3 force = gravity - dot(gravity, positionNormal) * positionNormal;
 
-		velocity = velocity + force * dt;
+			velocity = velocity + force * dt;
 
-		position = position + velocity * dt;
-		position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
-		positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
-
+			position = position + velocity * dt;
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		}
 		if (position.x > 1 + radius) {
 			position.x = -1 - radius;
 			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
@@ -743,6 +742,7 @@ struct SphereObject : public Object{
 			vec3 normalizedVelocity = normalize(velocity);
 			attachedCamera->wEye = centerPosition + normalizedVelocity * 0.01 + vec3(0, 0, 0.04);
 			attachedCamera->wLookat = centerPosition + velocity;
+			attachedCamera->wVup = positionNormal;
 			//printf("x %f y %f z %f\n", attachedCamera->wEye.x, attachedCamera->wEye.y, attachedCamera->wEye.z);
 			//printf("x %f y %f z %f\n", attachedCamera->wLookat.x, attachedCamera->wLookat.y, attachedCamera->wLookat.z);
 		}
