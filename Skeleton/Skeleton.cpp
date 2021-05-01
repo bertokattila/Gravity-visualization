@@ -504,11 +504,22 @@ public:
 		X = U * 2 - 1;
 		Y = V * 2 - 1;
 		Z = 0;
-		float h = 0;
+		
 		for (int i = 0; i < masses.size(); i++)
 		{		
 			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.02, -1) * masses.at(i).weight * -1;	
 		}
+	}
+
+	vec3 getNormal(vec2 from) {
+		Dnum2 X(from.x, vec2(1, 0));
+		Dnum2 Y(from.y, vec2(0, 1));
+		Dnum2 Z = 0;
+		for (int i = 0; i < masses.size(); i++)
+		{
+			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.02, -1) * masses.at(i).weight * -1;
+		}
+		return normalize(vec3(-Z.d.x, -Z.d.y, 1));
 	}
 };
 
@@ -697,14 +708,7 @@ struct GravitySheetObject : public Object {
 	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {
 
 	}
-	bool active = false;
 	void Animate(float tstart, float tend) {
-		for (size_t i = 0; i < masses.size(); i++)
-		{
-		
-			
-		}
-		//printf("\n");
 		
 	}
 	void addMass(Mass mass) {
@@ -932,6 +936,8 @@ void onMouse(int button, int state, int pX, int pY) {
 	float normalizedY = (float)pY / (float)windowHeight;
 	if (!button) {
 		scene.startNewSphere(vec3(normalizedX, normalizedY, 0));
+		vec3 tmp = ((GravitySheet*)scene.gravitySheetObject->geometry)->getNormal(vec2(normalizedX * 2 - 1, normalizedY * 2 - 1));
+		printf("x %f y %f z %f\n", tmp.x, tmp.y, tmp.z);
 	}
 	else {
 		weightCounter += 0.01;
