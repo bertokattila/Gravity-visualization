@@ -694,6 +694,8 @@ struct SphereObject : public Object{
 	float radius = 0;
 	Camera* attachedCamera = NULL;
 	GravitySheetObject* gravitySheetObject;
+	bool active = false;
+	vec3 gravity = vec3(0, 0, -1);
 	SphereObject(Shader* _shader, Material* _material, Geometry* _geometry, vec3 velocity, vec3 scale, GravitySheetObject* gravityObj) : Object(_shader, _material, _geometry) {
 		this->velocity = velocity;
 		this->scale = scale;
@@ -702,16 +704,40 @@ struct SphereObject : public Object{
 		position = vec3(-1.0 + radius, -1.0 + radius, 0);
 		gravitySheetObject = gravityObj;
 	}
-	bool active = false;
 	void Animate(float tstart, float tend) { 
-		position = position + velocity * (tend - tstart);
-		position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
-		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y)); ///
+		float dt = (tend - tstart);
 
-		if (position.x > 1 + radius) position.x = -1 - radius;
-		if (position.x < -1 - radius) position.x = 1 + radius;
-		if (position.y > 1 + radius) position.y = -1 - radius;
-		if (position.y < -1 - radius) position.y = 1 + radius;
+		
+		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+
+		vec3 force = gravity - dot(gravity, positionNormal) * positionNormal;
+
+		velocity = velocity + force * dt;
+
+		position = position + velocity * dt;
+		position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+		positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+
+		if (position.x > 1 + radius) {
+			position.x = -1 - radius;
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		}
+		if (position.x < -1 - radius) {
+			position.x = 1 + radius;
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		}
+		if (position.y > 1 + radius) {
+			position.y = -1 - radius;
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		}
+		if (position.y < -1 - radius) {
+			position.y = 1 + radius;
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		}
 
 		if (attachedCamera != NULL && active) {
 			vec3 normalizedVelocity = normalize(velocity);
