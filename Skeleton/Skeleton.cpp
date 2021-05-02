@@ -294,6 +294,7 @@ class PhongShader : public Shader {
 		uniform Material material;
 		uniform Light[8] lights;    // light sources 
 		uniform int   nLights;
+		uniform int isGravitySheet;
 
 		in  vec3 wNormal;       // interpolated world sp normal
 		in  vec3 wView;         // interpolated world sp view
@@ -308,27 +309,30 @@ class PhongShader : public Shader {
 			vec3 V = normalize(wView); 
 			if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces like Mobius or Klein
 		
+
 			float discreteDarkness = 1;
-			if (zCoord < -0.5) {
-				if (zCoord < -0.6) {
-					if (zCoord < -0.8) {
-						if (zCoord < -1) {
-							discreteDarkness = 0;
+			if(isGravitySheet == 0){
+				
+				if (zCoord < -0.5) {
+					if (zCoord < -0.6) {
+						if (zCoord < -0.8) {
+							if (zCoord < -1) {
+								discreteDarkness = 0;
+							}
+							else {
+								discreteDarkness = 0.2;
+							}
 						}
 						else {
-							discreteDarkness = 0.2;
+							discreteDarkness = 0.5;
 						}
 					}
-					else {
-						discreteDarkness = 0.5;
+					else
+					{
+						discreteDarkness = 0.7;
 					}
 				}
-				else
-				{
-					discreteDarkness = 0.7;
-				}
 			}
-			
 
 			vec3 ka = material.ka;
 			vec3 kd = material.kd * discreteDarkness;
@@ -496,14 +500,11 @@ public:
 
 	void Draw(Shader* shader, RenderState state) {
 		shader->Bind(state);
-
-		float zCoord;
-		float discreteDarkness;
-
-			
-
+		shader->setUniform(true, "isGravitySheet");
+		
 		glBindVertexArray(vao);
 		for (unsigned int i = 0; i < nStrips; i++) glDrawArrays(GL_TRIANGLE_STRIP, i * nVtxPerStrip, nVtxPerStrip);
+		shader->setUniform(false, "isGravitySheet");
 	}
 };
 
