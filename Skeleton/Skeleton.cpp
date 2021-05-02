@@ -167,20 +167,6 @@ struct Light {
 };
 
 //---------------------------
-class CheckerBoardTexture : public Texture {
-	//---------------------------
-public:
-	CheckerBoardTexture(const int width, const int height) : Texture() {
-		std::vector<vec4> image(width * height);
-		const vec4 yellow(1, 1, 0, 1), blue(0, 0, 1, 1);
-		for (int x = 0; x < width; x++) for (int y = 0; y < height; y++) {
-			image[y * width + x] = (x & 1) ^ (y & 1) ? yellow : blue;
-		}
-		create(width, height, image, GL_NEAREST);
-	}
-};
-
-//---------------------------
 struct RenderState {
 	//---------------------------
 	mat4	           MVP, M, Minv, V, P;
@@ -207,82 +193,6 @@ public:
 		setUniform(light.La, name + ".La");
 		setUniform(light.Le, name + ".Le");
 		setUniform(light.wLightPos, name + ".wLightPos");
-	}
-};
-
-//---------------------------
-class GouraudShader : public Shader {
-	//---------------------------
-	const char* vertexSource = R"(
-		#version 330
-		precision highp float;
-
-		struct Light {
-			vec3 La, Le;
-			vec4 wLightPos;
-		};
-		
-		struct Material {
-			vec3 kd, ks, ka;
-			float shininess;
-		};
-
-		uniform mat4  MVP, M, Minv;  // MVP, Model, Model-inverse
-		uniform Light[8] lights;     // light source direction 
-		uniform int   nLights;		 // number of light sources
-		uniform vec3  wEye;          // pos of eye
-		uniform Material  material;  // diffuse, specular, ambient ref
-
-		layout(location = 0) in vec3  vtxPos;            // pos in modeling space
-		layout(location = 1) in vec3  vtxNorm;      	 // normal in modeling space
-
-		out vec3 radiance;		    // reflected radiance
-
-		void main() {
-			gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
-			// radiance computation
-			vec4 wPos = vec4(vtxPos, 1) * M;	
-			vec3 V = normalize(wEye * wPos.w - wPos.xyz);
-			vec3 N = normalize((Minv * vec4(vtxNorm, 0)).xyz);
-			if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces like Mobius or Klein
-
-			radiance = vec3(0, 0, 0);
-			for(int i = 0; i < nLights; i++) {
-				vec3 L = normalize(lights[i].wLightPos.xyz * wPos.w - wPos.xyz * lights[i].wLightPos.w);
-				vec3 H = normalize(L + V);
-				float cost = max(dot(N,L), 0), cosd = max(dot(N,H), 0);
-				radiance += material.ka * lights[i].La + (material.kd * cost + material.ks * pow(cosd, material.shininess)) * lights[i].Le;
-			}
-		}
-	)";
-
-	// fragment shader in GLSL
-	const char* fragmentSource = R"(
-		#version 330
-		precision highp float;
-
-		in  vec3 radiance;      // interpolated radiance
-		out vec4 fragmentColor; // output goes to frame buffer
-
-		void main() {
-			fragmentColor = vec4(radiance, 1);
-		}
-	)";
-public:
-	GouraudShader() { create(vertexSource, fragmentSource, "fragmentColor"); }
-
-	void Bind(RenderState state) {
-		Use(); 		// make this program run
-		setUniform(state.MVP, "MVP");
-		setUniform(state.M, "M");
-		setUniform(state.Minv, "Minv");
-		setUniform(state.wEye, "wEye");
-		setUniformMaterial(*state.material, "material");
-
-		setUniform((int)state.lights.size(), "nLights");
-		for (unsigned int i = 0; i < state.lights.size(); i++) {
-			setUniformLight(state.lights[i], std::string("lights[") + std::to_string(i) + std::string("]"));
-		}
 	}
 };
 
@@ -419,67 +329,6 @@ public:
 	}
 };
 
-
-//---------------------------
-class NPRShader : public Shader {
-	//---------------------------
-	const char* vertexSource = R"(
-		#version 330
-		precision highp float;
-
-		uniform mat4  MVP, M, Minv; // MVP, Model, Model-inverse
-		uniform	vec4  wLightPos;
-		uniform vec3  wEye;         // pos of eye
-
-		layout(location = 0) in vec3  vtxPos;            // pos in modeling space
-		layout(location = 1) in vec3  vtxNorm;      	 // normal in modeling space
-		layout(location = 2) in vec2  vtxUV;
-
-		out vec3 wNormal, wView, wLight;				// in world space
-		out vec2 texcoord;
-
-		void main() {
-		   gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
-		   vec4 wPos = vec4(vtxPos, 1) * M;
-		   wLight = wLightPos.xyz * wPos.w - wPos.xyz * wLightPos.w;
-		   wView  = wEye * wPos.w - wPos.xyz;
-		   wNormal = (Minv * vec4(vtxNorm, 0)).xyz;
-		   texcoord = vtxUV;
-		}
-	)";
-
-	// fragment shader in GLSL
-	const char* fragmentSource = R"(
-		#version 330
-		precision highp float;
-
-		uniform sampler2D diffuseTexture;
-
-		in  vec3 wNormal, wView, wLight;	// interpolated
-		in  vec2 texcoord;
-		out vec4 fragmentColor;    			// output goes to frame buffer
-
-		void main() {
-		   vec3 N = normalize(wNormal), V = normalize(wView), L = normalize(wLight);
-		   if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces like Mobius or Klein
-		   float y = (dot(N, L) > 0.5) ? 1 : 0.5;
-		   if (abs(dot(N, V)) < 0.2) fragmentColor = vec4(0, 0, 0, 1);
-		   else						 fragmentColor = vec4(y * texture(diffuseTexture, texcoord).rgb, 1);
-		}
-	)";
-public:
-	NPRShader() { create(vertexSource, fragmentSource, "fragmentColor"); }
-
-	void Bind(RenderState state) {
-		Use(); 		// make this program run
-		setUniform(state.MVP, "MVP");
-		setUniform(state.M, "M");
-		setUniform(state.Minv, "Minv");
-		setUniform(state.wEye, "wEye");
-		setUniform(*state.texture, std::string("diffuseTexture"));
-		setUniform(state.lights[0].wLightPos, "wLightPos");
-	}
-};
 
 //---------------------------
 class Geometry {
@@ -625,103 +474,6 @@ public:
 	}
 };
 
-//---------------------------
-class Tractricoid : public ParamSurface {
-	//---------------------------
-public:
-	Tractricoid() { create(); }
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		const float height = 3.0f;
-		U = U * height, V = V * 2 * M_PI;
-		X = Cos(V) / Cosh(U); Y = Sin(V) / Cosh(U); Z = U - Tanh(U);
-	}
-};
-
-//---------------------------
-class Cylinder : public ParamSurface {
-	//---------------------------
-public:
-	Cylinder() { create(); }
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		U = U * 2.0f * M_PI, V = V * 2 - 1.0f;
-		X = Cos(U); Y = Sin(U); Z = V;
-	}
-};
-
-//---------------------------
-class Torus : public ParamSurface {
-	//---------------------------
-public:
-	Torus() { create(); }
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		const float R = 1, r = 0.5f;
-		U = U * 2.0f * M_PI, V = V * 2.0f * M_PI;
-		Dnum2 D = Cos(U) * r + R;
-		X = D * Cos(V); Y = D * Sin(V); Z = Sin(U) * r;
-	}
-};
-
-//---------------------------
-class Mobius : public ParamSurface {
-	//---------------------------
-public:
-	Mobius() { create(); }
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		const float R = 1, width = 0.5f;
-		U = U * M_PI, V = (V - 0.5f) * width;
-		X = (Cos(U) * V + R) * Cos(U * 2);
-		Y = (Cos(U) * V + R) * Sin(U * 2);
-		Z = Sin(U) * V;
-	}
-};
-
-//---------------------------
-class Klein : public ParamSurface {
-	//---------------------------
-	const float size = 1.5f;
-public:
-	Klein() { create(); }
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		U = U * M_PI * 2, V = V * M_PI * 2;
-		Dnum2 a = Cos(U) * (Sin(U) + 1) * 0.3f;
-		Dnum2 b = Sin(U) * 0.8f;
-		Dnum2 c = (Cos(U) * (-0.1f) + 0.2f);
-		X = a + c * ((U.f > M_PI) ? Cos(V + M_PI) : Cos(U) * Cos(V));
-		Y = b + ((U.f > M_PI) ? 0 : c * Sin(U) * Cos(V));
-		Z = c * Sin(V);
-	}
-};
-
-//---------------------------
-class Boy : public ParamSurface {
-	//---------------------------
-public:
-	Boy() { create(); }
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		U = (U - 0.5f) * M_PI, V = V * M_PI;
-		float r2 = sqrt(2.0f);
-		Dnum2 denom = (Sin(U * 3) * Sin(V * 2) * (-3 / r2) + 3) * 1.2f;
-		Dnum2 CosV2 = Cos(V) * Cos(V);
-		X = (Cos(U * 2) * CosV2 * r2 + Cos(U) * Sin(V * 2)) / denom;
-		Y = (Sin(U * 2) * CosV2 * r2 - Sin(U) * Sin(V * 2)) / denom;
-		Z = (CosV2 * 3) / denom;
-	}
-};
-
-//---------------------------
-class Dini : public ParamSurface {
-	//---------------------------
-	Dnum2 a = 1.0f, b = 0.15f;
-public:
-	Dini() { create(); }
-
-	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
-		U = U * 4 * M_PI, V = V * (1 - 0.1f) + 0.1f;
-		X = a * Cos(U) * Sin(V);
-		Y = a * Sin(U) * Sin(V);
-		Z = a * (Cos(V) + Log(Tan(V / 2))) + b * U + 3;
-	}
-};
 
 //---------------------------
 struct Object {
@@ -875,8 +627,7 @@ public:
 
 		// Shaders
 		Shader* phongShader = new PhongShader();
-		Shader* gouraudShader = new GouraudShader();
-		Shader* nprShader = new NPRShader();
+		
 
 		// Materials
 		Material* material0 = new Material;
@@ -895,12 +646,7 @@ public:
 		// Geometries
 		Geometry* sphere = new Sphere();
 		Geometry* gravitySheet = new GravitySheet();
-		Geometry* tractricoid = new Tractricoid();
-		Geometry* torus = new Torus();
-		Geometry* mobius = new Mobius();
-		Geometry* klein = new Klein();
-		Geometry* boy = new Boy();
-		Geometry* dini = new Dini();
+		
 
 		// Create objects by setting up their vertex data on the GPU
 		//Object* sphereObject1 = new SphereObject(phongShader, material0, sphere, vec3(0.2, 0.2, 0.2), vec3(0.05f, 0.05f, 0.05f));
@@ -912,51 +658,7 @@ public:
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
 
-		// Create objects by setting up their vertex data on the GPU
-		Object* tractiObject1 = new Object(phongShader, material0, tractricoid);
-		tractiObject1->translation = vec3(-6, 3, 0);
-		tractiObject1->rotationAxis = vec3(1, 0, 0);
-		//objects.push_back(tractiObject1);
-
-		Object* torusObject1 = new Object(phongShader, material0, torus);
-		torusObject1->translation = vec3(-3, 3, 0);
-		torusObject1->scale = vec3(0.7f, 0.7f, 0.7f);
-		torusObject1->rotationAxis = vec3(1, 0, 0);
-		//objects.push_back(torusObject1);
-
-		Object* mobiusObject1 = new Object(phongShader, material0, mobius);
-		mobiusObject1->translation = vec3(0, 3, 0);
-		mobiusObject1->scale = vec3(0.7f, 0.7f, 0.7f);
-		mobiusObject1->rotationAxis = vec3(1, 0, 0);
-		//objects.push_back(mobiusObject1);
-
-		Object* kleinObject1 = new Object(phongShader, material1, klein);
-		kleinObject1->translation = vec3(3, 3, 0);
-		//objects.push_back(kleinObject1);
-
-		Object* boyObject1 = new Object(phongShader, material1, boy);
-		boyObject1->translation = vec3(6, 3, 0);
-		//objects.push_back(boyObject1);
-
-		Object* diniObject1 = new Object(phongShader, material1, dini);
-		diniObject1->translation = vec3(9, 3, 0);
-		diniObject1->scale = vec3(0.7f, 0.7f, 0.7f);
-		diniObject1->rotationAxis = vec3(1, 0, 0);
-		//objects.push_back(diniObject1);
-
-		/*int nObjects = objects.size();
-		for (int i = 0; i < nObjects; i++) {
-			Object* object = new Object(*objects[i]);
-			object->translation.y -= 3;
-			object->shader = gouraudShader;
-			objects.push_back(object);
-			object = new Object(*objects[i]);
-			object->translation.y -= 6;
-			object->shader = nprShader;
-			objects.push_back(object);
-		}
-		*/
-
+		
 		// Camera
 		camera.wEye = vec3(0, 0, 5);
 		camera.wLookat = vec3(0, 0, 0);
@@ -975,11 +677,7 @@ public:
 		lights[1].rotateAround = vec3(0.5, 0.5, 1);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(0.4, 0.4, 0.4);
-		/*
-		lights[2].wLightPos = vec4(-5, 5, 5, 0);	// ideal point -> directional light source
-		lights[2].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[2].Le = vec3(0, 0, 3);
-		*/
+		
 		addNewSphere();
 	}
 
