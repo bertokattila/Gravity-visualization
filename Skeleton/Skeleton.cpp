@@ -476,12 +476,14 @@ struct Object {
 	Geometry* geometry;
 	vec3 scale, translation, rotationAxis;
 	float rotationAngle;
+	int id;
 public:
 	Object(Shader* _shader, Material* _material, Geometry* _geometry) :
 		scale(vec3(1, 1, 1)), translation(vec3(0, 0, 0)), rotationAxis(0, 0, 1), rotationAngle(0) {
 		shader = _shader;
 		material = _material;
 		geometry = _geometry;
+		id = -1;
 	}
 
 	virtual void SetModelingTransform(mat4& M, mat4& Minv) {
@@ -592,8 +594,8 @@ struct SphereObject : public Object{
 
 class Scene {
 	SceneCamera camera;
-	Camera folowerCamera;
-	bool folowingSpere = false;
+	Camera followerCamera;
+	bool followingSpere = false;
 	std::vector<Light> lights;
 public:
 	std::vector<Object*> objects;
@@ -620,7 +622,7 @@ public:
 		camera.wLookat = vec3(0, 0, 0);
 		camera.wVup = vec3(0, 1, 0);
 
-		folowerCamera.wVup = vec3(0, 0, 1);
+		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
 		lights[0].wLightPos = vec4(0.5, 0.5, 1, 0.5);
@@ -638,10 +640,10 @@ public:
 
 	void Render() {
 		RenderState state;
-		if (folowingSpere) {
-			state.wEye = folowerCamera.wEye;
-			state.V = folowerCamera.V();
-			state.P = folowerCamera.P();
+		if (followingSpere) {
+			state.wEye = followerCamera.wEye;
+			state.V = followerCamera.V();
+			state.P = followerCamera.P();
 		}
 		else {
 			state.wEye = camera.wEye;
@@ -696,15 +698,15 @@ public:
 		objects.push_back(sphereObject);
 	}
 	void switchCamera() {
-		if (!folowingSpere) {
-			sphereObjectToStart->attachCamera(&folowerCamera);
+		if (!followingSpere) {
+			sphereObjectToStart->attachCamera(&followerCamera);
 			sphereObjectCameraOwner = sphereObjectToStart;
 		}
 		else
 		{
 			sphereObjectCameraOwner->removeCamera();
 		}
-		folowingSpere = !folowingSpere;
+		followingSpere = !followingSpere;
 	}
 };
 
