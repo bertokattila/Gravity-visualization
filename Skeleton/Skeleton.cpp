@@ -108,6 +108,11 @@ struct Light {
 	//---------------------------
 	vec3 La, Le;
 	vec4 wLightPos; // homogeneous coordinates, can be at ideal point
+	void animate(float dt) {
+		wLightPos.x = wLightPos.x * cos(dt) - wLightPos.y * sin(dt);
+		wLightPos.y = wLightPos.x * sin(dt) + wLightPos.y * cos(dt);
+
+	}
 };
 
 //---------------------------
@@ -254,12 +259,14 @@ class PhongShader : public Shader {
 		out vec3 wNormal;		    // normal in world space
 		out vec3 wView;             // view in world space
 		out vec3 wLight[8];		    // light dir in world space
+		out float zCoord;           // world space z coord
 		
 
 		void main() {
 			gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
 			// vectors for radiance computation
 			vec4 wPos = vec4(vtxPos, 1) * M;
+			zCoord = wPos.z;
 			for(int i = 0; i < nLights; i++) {
 				wLight[i] = lights[i].wLightPos.xyz * wPos.w - wPos.xyz * lights[i].wLightPos.w;
 			}
@@ -291,6 +298,7 @@ class PhongShader : public Shader {
 		in  vec3 wNormal;       // interpolated world sp normal
 		in  vec3 wView;         // interpolated world sp view
 		in  vec3 wLight[8];     // interpolated world sp illum dir
+		in float zCoord;
 		
 		
         out vec4 fragmentColor; // output goes to frame buffer
@@ -300,8 +308,30 @@ class PhongShader : public Shader {
 			vec3 V = normalize(wView); 
 			if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces like Mobius or Klein
 		
+			float discreteDarkness = 1;
+			if (zCoord < -0.5) {
+				if (zCoord < -0.6) {
+					if (zCoord < -0.8) {
+						if (zCoord < -1) {
+							discreteDarkness = 0;
+						}
+						else {
+							discreteDarkness = 0.2;
+						}
+					}
+					else {
+						discreteDarkness = 0.5;
+					}
+				}
+				else
+				{
+					discreteDarkness = 0.7;
+				}
+			}
+			
+
 			vec3 ka = material.ka;
-			vec3 kd = material.kd;
+			vec3 kd = material.kd * discreteDarkness;
 
 			vec3 radiance = vec3(0, 0, 0);
 			for(int i = 0; i < nLights; i++) {
@@ -333,6 +363,7 @@ public:
 		}
 	}
 };
+
 
 //---------------------------
 class NPRShader : public Shader {
@@ -407,7 +438,7 @@ public:
 		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	}
-	virtual void Draw() = 0;
+	virtual void Draw(Shader* shader, RenderState state ) = 0;
 	~Geometry() {
 		glDeleteBuffers(1, &vbo);
 		glDeleteVertexArrays(1, &vao);
@@ -421,7 +452,7 @@ class ParamSurface : public Geometry {
 		vec3 position, normal;
 		vec2 texcoord;
 	};
-
+protected:
 	unsigned int nVtxPerStrip, nStrips;
 public:
 	ParamSurface() { nVtxPerStrip = nStrips = 0; }
@@ -463,7 +494,14 @@ public:
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, texcoord));
 	}
 
-	void Draw() {
+	void Draw(Shader* shader, RenderState state) {
+		shader->Bind(state);
+
+		float zCoord;
+		float discreteDarkness;
+
+			
+
 		glBindVertexArray(vao);
 		for (unsigned int i = 0; i < nStrips; i++) glDrawArrays(GL_TRIANGLE_STRIP, i * nVtxPerStrip, nVtxPerStrip);
 	}
@@ -490,9 +528,6 @@ struct Mass {
 	}
 };
 
-float distance2D(vec2 p1, vec2 p2) {
-	return sqrtf(powf(p1.x - p2.x, 2) + powf(p1.y - p2.y, 2));
-}
 
 class GravitySheet : public ParamSurface {
 	//---------------------------
@@ -530,6 +565,11 @@ public:
 			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.02, -1) * masses.at(i).weight * -1;
 		}
 		return Z.f;
+	}
+	void Draw(Shader* shader, RenderState state) {
+		shader->Bind(state);
+		glBindVertexArray(vao);
+		for (unsigned int i = 0; i < nStrips; i++) glDrawArrays(GL_TRIANGLE_STRIP, i * nVtxPerStrip, nVtxPerStrip);
 	}
 };
 
@@ -662,8 +702,8 @@ public:
 		state.MVP = state.M * state.V * state.P;
 		state.material = material;
 		
-		shader->Bind(state);
-		geometry->Draw();
+		
+		geometry->Draw(shader, state);
 	}
 
 	virtual void Animate(float tstart, float tend) { rotationAngle = 0.8f * tend; }
@@ -788,9 +828,9 @@ public:
 
 		// Materials
 		Material* material0 = new Material;
-		material0->kd = vec3(0.6f, 0.4f, 0.2f);
-		material0->ks = vec3(4, 4, 4);
-		material0->ka = vec3(0.1f, 0.1f, 0.1f);
+		material0->kd = vec3(0.26f, 0.53f, 0.96f);
+		material0->ks = vec3(0, 0, 0);
+		material0->ka = vec3(0.5f, 0.5f, 0.5f);
 		material0->shininess = 100;
 
 		Material* material1 = new Material;
@@ -873,19 +913,19 @@ public:
 		folowerCamera.wVup = vec3(0, 0, 1);
 
 		// Lights
-		lights.resize(3);
-		lights[0].wLightPos = vec4(5, 5, 4, 0);	// ideal point -> directional light source
-		lights[0].La = vec3(0.1f, 0.1f, 1);
-		lights[0].Le = vec3(3, 0, 0);
+		lights.resize(1);
+		lights[0].wLightPos = vec4(1, 1, 1, 1);	// ideal point -> directional light source
+		lights[0].La = vec3(0.6f, 0.6f, 0.6f);
+		lights[0].Le = vec3(0.4, 0.4, 0.4);
 
-		lights[1].wLightPos = vec4(5, 10, 20, 0);	// ideal point -> directional light source
+		/*lights[1].wLightPos = vec4(5, 10, 20, 0);	// ideal point -> directional light source
 		lights[1].La = vec3(0.2f, 0.2f, 0.2f);
 		lights[1].Le = vec3(0, 3, 0);
 
 		lights[2].wLightPos = vec4(-5, 5, 5, 0);	// ideal point -> directional light source
 		lights[2].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[2].Le = vec3(0, 0, 3);
-
+		*/
 		addNewSphere();
 	}
 
@@ -914,6 +954,11 @@ public:
 				objects.erase(objects.begin() + i);
 			}
 			
+		}
+		for (int i = 0; i < lights.size(); i++)
+		{
+			lights.at(i).animate(tend - tstart);
+
 		}
 
 	}
