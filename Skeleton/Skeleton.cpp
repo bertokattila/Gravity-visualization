@@ -438,7 +438,7 @@ public:
 		
 		for (int i = 0; i < masses.size(); i++)
 		{		
-			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.02, -1) * masses.at(i).weight * -1;	
+			Z = Z + Pow(Pow(Pow(X - masses.at(i).position.x, 2) + Pow(Y - masses.at(i).position.y, 2), 0.5) + 0.01, -1) * masses.at(i).weight * -1;	
 		}
 	}
 
@@ -577,8 +577,9 @@ struct SphereObject : public Object{
 		
 	}
 	bool shouldBeRemoved() {
+		return false;
 		//printf("pos %f\n", position.z);
-		return position.z < -2; }
+		return position.z < -1; }
 	void attachCamera(Camera* camera) {
 		attachedCamera = camera;
 		attachedCamera->wEye = centerPosition + vec3(0.01, 0.01, 0.04);
@@ -622,13 +623,13 @@ public:
 		folowerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
-		lights[0].rotateAround = vec3(-1, -1, 1);
+		lights[0].wLightPos = vec4(0.5, 0.5, 1, 0.5);
+		lights[0].rotateAround = vec3(-0.5, 0, 0.5);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(0.4, 0.4, 0.4);
 
-		lights[1].wLightPos = vec4(-1, -1, 1, 1);
-		lights[1].rotateAround = vec3(0.5, 0.5, 1);
+		lights[1].wLightPos = vec4(-0.5, 0, 1, 0.5);
+		lights[1].rotateAround = vec3(0.5, 0.5, 0.5);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(0.4, 0.4, 0.4);
 		
@@ -749,7 +750,7 @@ void onMouseMotion(int pX, int pY) {}
 
 void onIdle() {
 	static float tend = 0;
-	const float dt = 0.1f;
+	const float dt = 0.001f;
 	float tstart = tend;
 	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 
