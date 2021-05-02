@@ -756,7 +756,7 @@ struct SphereObject : public Object{
 	}
 	bool shouldBeRemoved() {
 		//printf("pos %f\n", position.z);
-		return position.z < -0.2; }
+		return position.z < -2; }
 	void attachCamera(Camera* camera) {
 		attachedCamera = camera;
 		attachedCamera->wEye = centerPosition + vec3(0.01, 0.01, 0.04);
@@ -985,7 +985,7 @@ void onKeyboard(unsigned char key, int pX, int pY) {
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
 
 // Mouse click event
-float weightCounter = 0;
+float weightCounter = 0.05;
 void onMouse(int button, int state, int pX, int pY) {
 	if (state) return;
 	pY = -1 * (pY - windowHeight);
@@ -997,7 +997,7 @@ void onMouse(int button, int state, int pX, int pY) {
 		printf("x %f y %f z %f\n", tmp.x, tmp.y, tmp.z);
 	}
 	else {
-		weightCounter += 0.01;
+		weightCounter += 0.005;
 		scene.gravitySheetObject->addMass(Mass(weightCounter, vec2(normalizedX *2 -1, normalizedY * 2 -1)));
 	}
 	
