@@ -42,6 +42,53 @@ typedef Dnum<vec2> Dnum2;
 
 const int tessellationLevel = 200;
 
+class Quaternion {
+	float real;
+	float i;
+	float j;
+	float k;
+public:
+	Quaternion(float i, float j, float k, float real) {
+		this->real = real;
+		this->i = i;
+		this->j = j;
+		this->k = k;
+	}
+	Quaternion() {
+		
+	}
+	Quaternion(vec4 q) {
+		this->real = q.w;
+		this->i = q.x;
+		this->j = q.y;
+		this->k = q.z;
+	}
+	vec4 getVec4() {
+		return vec4(i, j, k, real);
+	}
+
+	void print() {
+		printf("real: %f \ni: %f \nj: %f\nk: %f ", real, i, j, k);
+	}
+
+	static Quaternion quaternionMult(Quaternion k1, Quaternion k2) {
+		Quaternion resultQuaternion;
+		resultQuaternion.real = k1.real * k2.real - k1.i * k2.i - k1.j * k2.j - k1.k * k2.k;
+		resultQuaternion.i = k1.i * k2.real + k2.i * k1.real + k1.j * k2.k - k1.k * k2.j;
+		resultQuaternion.j = k1.j * k2.real + k2.j * k1.real + k1.k * k2.i - k1.i * k2.k;
+		resultQuaternion.k = k1.k * k2.real + k2.k * k1.real + k1.i * k2.j - k1.j * k2.i;
+		return resultQuaternion;
+	}
+	static Quaternion inverse(Quaternion quaternion) {
+		return  Quaternion(quaternion.real / (abs(quaternion) * abs(quaternion)), (-quaternion.i) / (abs(quaternion) * abs(quaternion)), (-quaternion.j) / (abs(quaternion) * abs(quaternion)), (-quaternion.k) / (abs(quaternion) * abs(quaternion)));
+	}
+
+	static float abs(Quaternion quaternion) {
+		return sqrtf(powf(quaternion.real, 2) + powf(quaternion.i, 2) + powf(quaternion.j, 2) + powf(quaternion.k, 2));
+	}
+};
+
+
 
 struct Camera { // 3D camera
 //---------------------------
@@ -105,13 +152,17 @@ struct Material {
 
 //---------------------------
 struct Light {
-	//---------------------------
+	vec3 rotateAround = vec3(0, 0, 0);
 	vec3 La, Le;
 	vec4 wLightPos; // homogeneous coordinates, can be at ideal point
-	void animate(float dt) {
-		wLightPos.x = wLightPos.x * cos(dt) - wLightPos.y * sin(dt);
-		wLightPos.y = wLightPos.x * sin(dt) + wLightPos.y * cos(dt);
-
+	void animate(float t) {
+		Quaternion q = Quaternion(vec4(sinf(t / 4.0f) * cosf(t) / 2.0f, sinf(t / 4.0f) * sinf(t) / 2.0f, sinf(t / 4.0f) * sqrtf(3.0f / 4.0f), cosf(t / 4.0f)));
+		Quaternion qInv = Quaternion(vec4(-sinf(t / 4.0f) * cosf(t) / 2.0f, -sinf(t / 4.0f) * sinf(t) / 2.0f, -sinf(t / 4.0f) * sqrtf(3.0f / 4.0f), cosf(t / 4.0f)));
+		vec4 p = vec4(wLightPos.x - rotateAround.x, wLightPos.y - rotateAround.y, wLightPos.z - rotateAround.z, 0);
+		vec4 result = Quaternion::quaternionMult(Quaternion::quaternionMult(q, p), qInv).getVec4();
+		wLightPos.x = result.x + rotateAround.x;
+		wLightPos.y = result.y + rotateAround.y;
+		wLightPos.z = result.z + rotateAround.z;
 	}
 };
 
@@ -914,15 +965,17 @@ public:
 		folowerCamera.wVup = vec3(0, 0, 1);
 
 		// Lights
-		lights.resize(1);
-		lights[0].wLightPos = vec4(1, 1, 1, 1);	// ideal point -> directional light source
-		lights[0].La = vec3(0.6f, 0.6f, 0.6f);
+		lights.resize(2);
+		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);	// ideal point -> directional light source
+		lights[0].rotateAround = vec3(-1, -1, 1);
+		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(0.4, 0.4, 0.4);
 
-		/*lights[1].wLightPos = vec4(5, 10, 20, 0);	// ideal point -> directional light source
-		lights[1].La = vec3(0.2f, 0.2f, 0.2f);
-		lights[1].Le = vec3(0, 3, 0);
-
+		lights[1].wLightPos = vec4(-1, -1, 1, 1);	// ideal point -> directional light source
+		lights[1].rotateAround = vec3(0.5, 0.5, 1);
+		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
+		lights[1].Le = vec3(0.4, 0.4, 0.4);
+		/*
 		lights[2].wLightPos = vec4(-5, 5, 5, 0);	// ideal point -> directional light source
 		lights[2].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[2].Le = vec3(0, 0, 3);
