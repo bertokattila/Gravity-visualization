@@ -1,19 +1,8 @@
-//=============================================================================================
-// Computer Graphics Sample Program: 3D engine-let
-// Shader: Gouraud, Phong, NPR
-// Material: diffuse + Phong-Blinn
-// Texture: CPU-procedural
-// Geometry: sphere, tractricoid, torus, mobius, klein-bottle, boy, dini
-// Camera: perspective
-// Light: point or directional sources
-//=============================================================================================
 #include "framework.h"
 
-//---------------------------
-template<class T> struct Dnum { // Dual numbers for automatic derivation
-//---------------------------
-	float f; // function value
-	T d;  // derivatives
+template<class T> struct Dnum {
+	float f; 
+	T d; 
 	Dnum(float f0 = 0, T d0 = T(0)) { f = f0, d = d0; }
 	Dnum operator+(Dnum r) { return Dnum(f + r.f, d + r.d); }
 	Dnum operator-(Dnum r) { return Dnum(f - r.f, d - r.d); }
@@ -25,7 +14,6 @@ template<class T> struct Dnum { // Dual numbers for automatic derivation
 	}
 };
 
-// Elementary functions prepared for the chain rule as well
 template<class T> Dnum<T> Exp(Dnum<T> g) { return Dnum<T>(expf(g.f), expf(g.f) * g.d); }
 template<class T> Dnum<T> Sin(Dnum<T> g) { return  Dnum<T>(sinf(g.f), cosf(g.f) * g.d); }
 template<class T> Dnum<T> Cos(Dnum<T>  g) { return  Dnum<T>(cosf(g.f), -sinf(g.f) * g.d); }
@@ -88,19 +76,16 @@ public:
 	}
 };
 
-
-
-struct Camera { // 3D camera
-//---------------------------
-	vec3 wEye, wLookat, wVup;   // extrinsic
-	float fov, asp, fp, bp;		// intrinsic
+struct Camera { 
+	vec3 wEye, wLookat, wVup;
+	float fov, asp, fp, bp;
 public:
 	Camera() {
 		asp = (float)windowWidth / windowHeight;
 		fov = 75.0f * (float)M_PI / 180.0f;
 		fp = 0.1; bp = 20;
 	}
-	mat4 V() { // view matrix: translates the center to the origin
+	mat4 V() {
 		vec3 w = normalize(wEye - wLookat);
 		vec3 u = normalize(cross(wVup, w));
 		vec3 v = cross(w, u);
@@ -110,7 +95,7 @@ public:
 			0, 0, 0, 1);
 	}
 
-	mat4 P() { // projection matrix
+	mat4 P() {
 		return mat4(1 / (tan(fov / 2) * asp), 0, 0, 0,
 			0, 1 / tan(fov / 2), 0, 0,
 			0, 0, -(fp + bp) / (bp - fp), -1,
@@ -118,14 +103,14 @@ public:
 	}
 };
 
-struct SceneCamera : Camera { // 3D camera
+struct SceneCamera : Camera {
 public:
 	SceneCamera() {
 		asp = (float)windowWidth / windowHeight;
 		fov = 75.0f * (float)M_PI / 180.0f;
 		fp = 1; bp = 50;
 	}
-	mat4 V() { // view matrix: translates the center to the origin
+	mat4 V() {
 		vec3 w = normalize(wEye - wLookat);
 		vec3 u = normalize(cross(wVup, w));
 		vec3 v = cross(w, u);
@@ -143,18 +128,15 @@ public:
 	}
 };
 
-//---------------------------
 struct Material {
-	//---------------------------
 	vec3 kd, ks, ka;
 	float shininess;
 };
 
-//---------------------------
 struct Light {
 	vec3 rotateAround = vec3(0, 0, 0);
 	vec3 La, Le;
-	vec4 wLightPos; // homogeneous coordinates, can be at ideal point
+	vec4 wLightPos;
 	void animate(float t) {
 		Quaternion q = Quaternion(vec4(sinf(t / 4.0f) * cosf(t) / 2.0f, sinf(t / 4.0f) * sinf(t) / 2.0f, sinf(t / 4.0f) * sqrtf(3.0f / 4.0f), cosf(t / 4.0f)));
 		Quaternion qInv = Quaternion(vec4(-sinf(t / 4.0f) * cosf(t) / 2.0f, -sinf(t / 4.0f) * sinf(t) / 2.0f, -sinf(t / 4.0f) * sqrtf(3.0f / 4.0f), cosf(t / 4.0f)));
@@ -166,9 +148,7 @@ struct Light {
 	}
 };
 
-//---------------------------
 struct RenderState {
-	//---------------------------
 	mat4	           MVP, M, Minv, V, P;
 	Material* material;
 	std::vector<Light> lights;
@@ -176,9 +156,7 @@ struct RenderState {
 	vec3	           wEye;
 };
 
-//---------------------------
 class Shader : public GPUProgram {
-	//---------------------------
 public:
 	virtual void Bind(RenderState state) = 0;
 
@@ -196,9 +174,7 @@ public:
 	}
 };
 
-//---------------------------
 class PhongShader : public Shader {
-	//---------------------------
 	const char* vertexSource = R"(
 		#version 330
 		precision highp float;
@@ -237,7 +213,6 @@ class PhongShader : public Shader {
 		}
 	)";
 
-	// fragment shader in GLSL
 	const char* fragmentSource = R"(
 		#version 330
 		precision highp float;
@@ -269,7 +244,6 @@ class PhongShader : public Shader {
 			vec3 N = normalize(wNormal);
 			vec3 V = normalize(wView); 
 			if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces like Mobius or Klein
-		
 
 			float discreteDarkness = 1;
 			if(isGravitySheet == 0){
@@ -314,7 +288,7 @@ public:
 	PhongShader() { create(vertexSource, fragmentSource, "fragmentColor"); }
 
 	void Bind(RenderState state) {
-		Use(); 		// make this program run
+		Use();
 		setUniform(state.MVP, "MVP");
 		setUniform(state.M, "M");
 		setUniform(state.Minv, "Minv");
@@ -329,17 +303,14 @@ public:
 	}
 };
 
-
-//---------------------------
 class Geometry {
-	//---------------------------
 protected:
-	unsigned int vao, vbo;        // vertex array object
+	unsigned int vao, vbo;
 public:
 	Geometry() {
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
+		glGenBuffers(1, &vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	}
 	virtual void Draw(Shader* shader, RenderState state ) = 0;
@@ -349,9 +320,7 @@ public:
 	}
 };
 
-//---------------------------
 class ParamSurface : public Geometry {
-	//---------------------------
 	struct VertexData {
 		vec3 position, normal;
 		vec2 texcoord;
@@ -380,7 +349,7 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		nVtxPerStrip = (M + 1) * 2;
 		nStrips = N;
-		std::vector<VertexData> vtxData;	// vertices on the CPU
+		std::vector<VertexData> vtxData;
 		for (int i = 0; i < N; i++) {
 			for (int j = 0; j <= M; j++) {
 				vtxData.push_back(GenVertexData((float)j / M, (float)i / N));
@@ -388,11 +357,9 @@ public:
 			}
 		}
 		glBufferData(GL_ARRAY_BUFFER, nVtxPerStrip * nStrips * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
-		glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
-		glEnableVertexAttribArray(2);  // attribute array 2 = TEXCOORD0
-		// attribute array, components/attribute, component type, normalize?, stride, offset
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, position));
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, normal));
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, texcoord));
@@ -408,9 +375,7 @@ public:
 	}
 };
 
-//---------------------------
 class Sphere : public ParamSurface {
-	//---------------------------
 public:
 	Sphere() { create(); }
 	void eval(Dnum2& U, Dnum2& V, Dnum2& X, Dnum2& Y, Dnum2& Z) {
@@ -428,7 +393,6 @@ struct Mass {
 		this->position = pos;
 	}
 };
-
 
 class GravitySheet : public ParamSurface {
 	//---------------------------
@@ -475,12 +439,9 @@ public:
 };
 
 
-//---------------------------
 struct Object {
-	//---------------------------
 	Shader* shader;
 	Material* material;
-	
 	Geometry* geometry;
 	vec3 scale, translation, rotationAxis;
 	float rotationAngle;
@@ -488,7 +449,6 @@ public:
 	Object(Shader* _shader, Material* _material, Geometry* _geometry) :
 		scale(vec3(1, 1, 1)), translation(vec3(0, 0, 0)), rotationAxis(0, 0, 1), rotationAngle(0) {
 		shader = _shader;
-		
 		material = _material;
 		geometry = _geometry;
 	}
@@ -505,30 +465,21 @@ public:
 		state.Minv = Minv;
 		state.MVP = state.M * state.V * state.P;
 		state.material = material;
-		
-		
 		geometry->Draw(shader, state);
 	}
-
-	virtual void Animate(float tstart, float tend) { rotationAngle = 0.8f * tend; }
+	virtual void Animate(float tstart, float tend) {}
 	virtual bool shouldBeRemoved() { return false; }
 };
 
 
 struct GravitySheetObject : public Object {
 	std::vector<Mass> masses;
-	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {
-
-	}
-	void Animate(float tstart, float tend) {
-
-	}
+	GravitySheetObject(Shader* _shader, Material* _material, Geometry* _geometry) : Object(_shader, _material, _geometry) {}
+	void Animate(float tstart, float tend) {}
 	void addMass(Mass mass) {
 		masses.push_back(mass);
 		((GravitySheet*)geometry)->masses.push_back(mass);
 		((GravitySheet*)geometry)->create();
-		//Draw();
-
 	}
 	bool shouldBeRemoved() { return false; }
 };
@@ -554,34 +505,30 @@ struct SphereObject : public Object{
 		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		if (active) {
 			float dt = (tend - tstart);
-
 			vec3 force = gravity - dot(gravity, positionNormal) * positionNormal;
-
 			velocity = velocity + force * dt;
-
 			position = position + velocity * dt;
-			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
-
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
 		if (position.x > 1 + radius) {
 			position.x = -1 - radius;
-			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
 		if (position.x < -1 - radius) {
 			position.x = 1 + radius;
-			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
 		if (position.y > 1 + radius) {
 			position.y = -1 - radius;
-			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
 		if (position.y < -1 - radius) {
 			position.y = 1 + radius;
-			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y)); /// korrekcio
+			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
 
@@ -611,11 +558,7 @@ struct SphereObject : public Object{
 	}
 };
 
-
-//---------------------------
 class Scene {
-	//---------------------------
-	
 	SceneCamera camera;
 	Camera folowerCamera;
 	bool folowingSpere = false;
@@ -625,55 +568,35 @@ public:
 	GravitySheetObject* gravitySheetObject;
 	void Build() {
 
-		// Shaders
 		Shader* phongShader = new PhongShader();
-		
 
-		// Materials
 		Material* material0 = new Material;
 		material0->kd = vec3(0.26f, 0.53f, 0.96f);
 		material0->ks = vec3(0, 0, 0);
 		material0->ka = vec3(0.5f, 0.5f, 0.5f);
 		material0->shininess = 100;
 
-		Material* material1 = new Material;
-		material1->kd = vec3(0.8f, 0.6f, 0.4f);
-		material1->ks = vec3(0.3f, 0.3f, 0.3f);
-		material1->ka = vec3(0.2f, 0.2f, 0.2f);
-		material1->shininess = 100;
-
-	
-		// Geometries
 		Geometry* sphere = new Sphere();
 		Geometry* gravitySheet = new GravitySheet();
 		
-
-		// Create objects by setting up their vertex data on the GPU
-		//Object* sphereObject1 = new SphereObject(phongShader, material0, sphere, vec3(0.2, 0.2, 0.2), vec3(0.05f, 0.05f, 0.05f));
-		//sphereObject1->translation = vec3(0, 0, 0);
-		//objects.push_back(sphereObject1);
-
 		gravitySheetObject = new GravitySheetObject(phongShader, material0, gravitySheet);
 		gravitySheetObject->translation = vec3(0, 0, 0);
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
 
-		
-		// Camera
 		camera.wEye = vec3(0, 0, 5);
 		camera.wLookat = vec3(0, 0, 0);
 		camera.wVup = vec3(0, 1, 0);
 
 		folowerCamera.wVup = vec3(0, 0, 1);
 
-		// Lights
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);	// ideal point -> directional light source
+		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
 		lights[0].rotateAround = vec3(-1, -1, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(0.4, 0.4, 0.4);
 
-		lights[1].wLightPos = vec4(-1, -1, 1, 1);	// ideal point -> directional light source
+		lights[1].wLightPos = vec4(-1, -1, 1, 1);
 		lights[1].rotateAround = vec3(0.5, 0.5, 1);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(0.4, 0.4, 0.4);
@@ -755,7 +678,6 @@ public:
 
 Scene scene;
 
-// Initialization, create an OpenGL context
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glEnable(GL_DEPTH_TEST);
@@ -763,25 +685,19 @@ void onInitialization() {
 	scene.Build();
 }
 
-// Window has become invalid: Redraw
 void onDisplay() {
-	glClearColor(0.5f, 0.5f, 0.8f, 1.0f);							// background color 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen
+	glClearColor(0.5f, 0.5f, 0.8f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 	scene.Render();
-	glutSwapBuffers();									// exchange the two buffers
+	glutSwapBuffers();
 }
 
-// Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) { 
-	if (key == ' ') {
-		scene.switchCamera();
-	}
+	if (key == ' ') { scene.switchCamera();}
 }
 
-// Key of ASCII code released
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
 
-// Mouse click event
 float weightCounter = 0.05;
 void onMouse(int button, int state, int pX, int pY) {
 	if (state) return;
@@ -791,24 +707,18 @@ void onMouse(int button, int state, int pX, int pY) {
 	if (!button) {
 		scene.startNewSphere(vec3(normalizedX, normalizedY, 0));
 		vec3 tmp = ((GravitySheet*)scene.gravitySheetObject->geometry)->getNormal(vec2(normalizedX * 2 - 1, normalizedY * 2 - 1));
-		printf("x %f y %f z %f\n", tmp.x, tmp.y, tmp.z);
 	}
 	else {
 		weightCounter += 0.005;
 		scene.gravitySheetObject->addMass(Mass(weightCounter, vec2(normalizedX *2 -1, normalizedY * 2 -1)));
 	}
-	
-	//printf("x %f y %f\n", worldX, worldY);
 }
 
-// Move mouse with key pressed
-void onMouseMotion(int pX, int pY) {
-}
+void onMouseMotion(int pX, int pY) {}
 
-// Idle event indicating that some time elapsed: do animation here
 void onIdle() {
 	static float tend = 0;
-	const float dt = 0.1f; // dt is ”infinitesimal”
+	const float dt = 0.1f;
 	float tstart = tend;
 	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 
