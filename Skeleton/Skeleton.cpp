@@ -517,7 +517,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-
+vec3 gravity = vec3(0, 0, -1);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -526,24 +526,32 @@ struct SphereObject : public Object{
 	Camera* attachedCamera = NULL;
 	GravitySheetObject* gravitySheetObject;
 	bool active = false;
-	vec3 gravity = vec3(0, 0, -1);
+	
+	float energy;
 	SphereObject(Shader* _shader, Material* _material, Geometry* _geometry, vec3 velocity, vec3 scale, GravitySheetObject* gravityObj) : Object(_shader, _material, _geometry) {
 		this->velocity = velocity;
 		this->scale = scale;
 		radius = 1.0f * scale.x;
 		centerPosition = vec3(-1.0 + radius, -1.0 + radius, radius);
-		position = vec3(-1.0 + radius, -1.0 + radius, 0);
+		
 		gravitySheetObject = gravityObj;
+		position = vec3(-1.0 + radius, -1.0 + radius, ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(-1.0 + radius, -1.0 + radius)));
+		
 	}
 	void Animate(float tstart, float tend) { 
 		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		if (active) {
 			float dt = (tend - tstart);
 			vec3 force = gravity - dot(gravity, positionNormal) * positionNormal;
+			//printf("vel x %f y %f z %f force x %f y %f z %f\n", velocity.x, velocity.y, velocity.z, force.x, force.y, force.z);
 			velocity = velocity + force * dt;
 			position = position + velocity * dt;
 			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
+
+			velocity = normalize(velocity);
+			velocity = velocity * sqrtf(2.0f * (energy - length(gravity) * position.z));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+			
 		}
 		if (position.x > 1 + radius) {
 			position.x = -1 - radius;
@@ -583,7 +591,7 @@ struct SphereObject : public Object{
 		return attachedCamera != NULL;
 	}
 	bool shouldBeRemoved() {
-		//return false;
+		return false;
 		//printf("pos %f\n", position.z);
 		return position.z < -1; }
 	void attachCamera(Camera* camera) {
@@ -690,6 +698,8 @@ public:
 	void startNewSphere(vec3 velocity) {
 		sphereObjectToStart->velocity = velocity;
 		sphereObjectToStart->active = true;
+		sphereObjectToStart->energy = length(gravity) * sphereObjectToStart->position.z + 0.5 * pow(length(velocity), 2);
+		printf("e %f\n", sphereObjectToStart->energy);
 		addNewSphere();
 	}
 	float random() {
@@ -755,7 +765,7 @@ void onMouseMotion(int pX, int pY) {}
 
 void onIdle() {
 	static float tend = 0;
-	const float dt = 0.001f;
+	const float dt = 0.02f;
 	float tstart = tend;
 	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 
