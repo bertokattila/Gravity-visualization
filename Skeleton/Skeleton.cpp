@@ -114,7 +114,7 @@ public:
 	Camera() {
 		asp = (float)windowWidth / windowHeight;
 		fov = 75.0f * (float)M_PI / 180.0f;
-		fp = 0.1; bp = 20;
+		fp = 0.01; bp = 10;
 	}
 	mat4 V() {
 		vec3 w = normalize(wEye - wLookat);
@@ -165,7 +165,7 @@ struct Material {
 };
 
 struct Light {
-	vec3 rotateAround = vec3(0, 0, 0);
+	vec3 rotateAround;
 	vec3 La, Le;
 	vec4 wLightPos;
 	void animate(float t) {
@@ -229,7 +229,6 @@ class PhongShader : public Shader {
 		out vec3 wLight[8];		    // light dir in world space
 		out float zCoord;           // world space z coord
 		
-
 		void main() {
 			gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
 			// vectors for radiance computation
@@ -240,7 +239,6 @@ class PhongShader : public Shader {
 			}
 		    wView  = wEye * wPos.w - wPos.xyz;
 		    wNormal = (Minv * vec4(vtxNorm, 0)).xyz;
-		    
 		}
 	)";
 
@@ -267,7 +265,6 @@ class PhongShader : public Shader {
 		in  vec3 wView;         // interpolated world sp view
 		in  vec3 wLight[8];     // interpolated world sp illum dir
 		in float zCoord;
-		
 		
         out vec4 fragmentColor; // output goes to frame buffer
 
@@ -426,7 +423,6 @@ struct Mass {
 };
 
 class GravitySheet : public ParamSurface {
-	//---------------------------
 public:
 	GravitySheet() { create(); }
 	std::vector<Mass> masses;
@@ -533,7 +529,6 @@ struct SphereObject : public Object{
 		this->scale = scale;
 		radius = 1.0f * scale.x;
 		centerPosition = vec3(-1.0 + radius, -1.0 + radius, radius);
-		
 		gravitySheetObject = gravityObj;
 		position = vec3(-1.0 + radius, -1.0 + radius, ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(-1.0 + radius, -1.0 + radius)));
 		
@@ -543,14 +538,22 @@ struct SphereObject : public Object{
 		if (active) {
 			float dt = (tend - tstart);
 			vec3 force = gravity - dot(gravity, positionNormal) * positionNormal;
-			//printf("vel x %f y %f z %f force x %f y %f z %f\n", velocity.x, velocity.y, velocity.z, force.x, force.y, force.z);
+			vec3 lookAt = position;
 			velocity = velocity + force * dt;
 			position = position + velocity * dt;
 			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 
+			lookAt = normalize(position - lookAt);
 			velocity = normalize(velocity);
 			velocity = velocity * sqrtf(2.0f * (energy - length(gravity) * position.z));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+
+			if (attachedCamera != NULL) {
+				vec3 normalizedVelocity = normalize(velocity);
+				attachedCamera->wEye = centerPosition;
+				attachedCamera->wLookat = centerPosition + vec3(normalizedVelocity.x, normalizedVelocity.y, normalizedVelocity.z);
+				attachedCamera->wVup = positionNormal;
+			}
 			
 		}
 		if (position.x > 1 + radius) {
@@ -573,16 +576,6 @@ struct SphereObject : public Object{
 			position.z = ((GravitySheet*)gravitySheetObject->geometry)->getZ(vec2(position.x, position.y));
 			positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
 		}
-
-		if (attachedCamera != NULL && active) {
-			vec3 normalizedVelocity = normalize(velocity);
-			attachedCamera->wEye = centerPosition + normalizedVelocity * 0.01 + vec3(0, 0, 0.04);
-			attachedCamera->wLookat = centerPosition + velocity;
-			attachedCamera->wVup = positionNormal;
-			//printf("x %f y %f z %f\n", attachedCamera->wEye.x, attachedCamera->wEye.y, attachedCamera->wEye.z);
-			//printf("x %f y %f z %f\n", attachedCamera->wLookat.x, attachedCamera->wLookat.y, attachedCamera->wLookat.z);
-		}
-
 		centerPosition = position + radius * positionNormal;
 		translation = centerPosition;
 		
@@ -590,14 +583,14 @@ struct SphereObject : public Object{
 	bool hasCameraAttached() {
 		return attachedCamera != NULL;
 	}
-	bool shouldBeRemoved() {
-		return false;
-		//printf("pos %f\n", position.z);
-		return position.z < -1; }
+	bool shouldBeRemoved() { return position.z < -2; }
 	void attachCamera(Camera* camera) {
 		attachedCamera = camera;
-		attachedCamera->wEye = centerPosition + vec3(0.01, 0.01, 0.04);
+		attachedCamera->wEye = centerPosition;
 		attachedCamera->wLookat = vec3(1,1,0);
+		vec3 positionNormal = ((GravitySheet*)gravitySheetObject->geometry)->getNormal(vec2(position.x, position.y));
+		attachedCamera->wVup = positionNormal;
+		scale = 0;
 	}
 	void removeCamera() {
 		attachedCamera = NULL;
@@ -637,13 +630,13 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
+		lights[0].wLightPos = vec4(0.5, 0.5, 0.2, 1);
 		lights[0].rotateAround = vec3(-0.5, 0, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[0].Le = vec3(0.4, 0.4, 0.4);
+		lights[0].Le = vec3(1.4, 1.4, 1.4);
 
 		lights[1].wLightPos = vec4(-0.5, 0, 1, 1);
-		lights[1].rotateAround = vec3(0.5, 0.5, 1);
+		lights[1].rotateAround = vec3(0.5, 0.5, 0.2);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(0.4, 0.4, 0.4);
 		
@@ -667,9 +660,8 @@ public:
 		for (Object* obj : objects) obj->Draw(state);
 	}
 	void switchCamera() {
-		((SphereObject*)objects.at(objects.size() - 1))->attachCamera(&followerCamera);
-		//sphereObjectToStart->attachCamera(&followerCamera);
-		sphereObjectCameraOwner = sphereObjectToStart;
+		((SphereObject*)objects.at(1))->attachCamera(&followerCamera);
+		sphereObjectCameraOwner = ((SphereObject*)objects.at(1));
 		followingSpere = true;
 	}
 
@@ -688,7 +680,6 @@ public:
 		for (int i = 0; i < lights.size(); i++)
 		{
 			lights.at(i).animate(tend - tstart);
-
 		}
 
 	}
@@ -699,7 +690,6 @@ public:
 		sphereObjectToStart->velocity = velocity;
 		sphereObjectToStart->active = true;
 		sphereObjectToStart->energy = length(gravity) * sphereObjectToStart->position.z + 0.5 * pow(length(velocity), 2);
-		printf("e %f\n", sphereObjectToStart->energy);
 		addNewSphere();
 	}
 	float random() {
@@ -720,7 +710,6 @@ public:
 		sphereObjectToStart = sphereObject;
 		objects.push_back(sphereObject);
 	}
-
 };
 
 Scene scene;
@@ -765,7 +754,7 @@ void onMouseMotion(int pX, int pY) {}
 
 void onIdle() {
 	static float tend = 0;
-	const float dt = 0.02f;
+	const float dt = 0.01f;
 	float tstart = tend;
 	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 
