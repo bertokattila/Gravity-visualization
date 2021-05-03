@@ -502,6 +502,7 @@ public:
 	}
 	virtual void Animate(float tstart, float tend) {}
 	virtual bool shouldBeRemoved() { return false; }
+	virtual bool hasCameraAttached() { return false; }
 };
 
 
@@ -578,8 +579,11 @@ struct SphereObject : public Object{
 		translation = centerPosition;
 		
 	}
+	bool hasCameraAttached() {
+		return attachedCamera != NULL;
+	}
 	bool shouldBeRemoved() {
-		return false;
+		//return false;
 		//printf("pos %f\n", position.z);
 		return position.z < -1; }
 	void attachCamera(Camera* camera) {
@@ -608,7 +612,7 @@ public:
 		material0->kd = vec3(0.26f, 0.53f, 0.96f);
 		material0->ks = vec3(0, 0, 0);
 		material0->ka = vec3(0.5f, 0.5f, 0.5f);
-		material0->shininess = 100;
+		material0->shininess = 10;
 
 		Geometry* sphere = new Sphere();
 		Geometry* gravitySheet = new GravitySheet();
@@ -625,13 +629,13 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 1, 0.5);
-		lights[0].rotateAround = vec3(-0.5, 0, 0.5);
+		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
+		lights[0].rotateAround = vec3(-0.5, 0, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(0.4, 0.4, 0.4);
 
-		lights[1].wLightPos = vec4(-0.5, 0, 1, 0.5);
-		lights[1].rotateAround = vec3(0.5, 0.5, 0.5);
+		lights[1].wLightPos = vec4(-0.5, 0, 1, 1);
+		lights[1].rotateAround = vec3(0.5, 0.5, 1);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(0.4, 0.4, 0.4);
 		
@@ -654,13 +658,22 @@ public:
 		state.lights = lights;
 		for (Object* obj : objects) obj->Draw(state);
 	}
+	void switchCamera() {
+		((SphereObject*)objects.at(objects.size() - 1))->attachCamera(&followerCamera);
+		//sphereObjectToStart->attachCamera(&followerCamera);
+		sphereObjectCameraOwner = sphereObjectToStart;
+		followingSpere = true;
+	}
 
 	void Animate(float tstart, float tend) {
 		for (int i = 0; i < objects.size(); i++)
 		{
 			objects.at(i)->Animate(tstart, tend);
 			if (objects.at(i)->shouldBeRemoved()) {
+				bool switchCameraB = false;
+				if (objects.at(i)->hasCameraAttached()) switchCameraB = true;
 				objects.erase(objects.begin() + i);
+				if (switchCameraB) switchCamera();
 			}
 			
 		}
@@ -697,17 +710,7 @@ public:
 		sphereObjectToStart = sphereObject;
 		objects.push_back(sphereObject);
 	}
-	void switchCamera() {
-		if (!followingSpere) {
-			sphereObjectToStart->attachCamera(&followerCamera);
-			sphereObjectCameraOwner = sphereObjectToStart;
-		}
-		else
-		{
-			sphereObjectCameraOwner->removeCamera();
-		}
-		followingSpere = !followingSpere;
-	}
+
 };
 
 Scene scene;
