@@ -268,10 +268,10 @@ class PhongShader : public Shader {
 			float discreteDarkness = 1;
 			if(isGravitySheet == 0){
 				
-				if (zCoord < -0.5) {
-					if (zCoord < -0.6) {
-						if (zCoord < -0.8) {
-							if (zCoord < -1) {
+				if (zCoord < -0.7) {
+					if (zCoord < -1) {
+						if (zCoord < -1.5) {
+							if (zCoord < -2) {
 								discreteDarkness = 0;
 							}
 							else {
@@ -505,7 +505,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -1);
+vec3 gravity = vec3(0, 0, -5);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -622,13 +622,13 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 0.2, 1);
+		lights[0].wLightPos = vec4(0.5, 0.5, 0.1, 1);
 		lights[0].rotateAround = vec3(-1, 0, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[0].Le = vec3(2.4, 2.4, 2.4);
+		lights[0].Le = vec3(1.4, 1.4, 1.4);
 		
 		lights[1].wLightPos = vec4(-1, 0, 1, 1);
-		lights[1].rotateAround = vec3(0.5, 0.5, 0.2);
+		lights[1].rotateAround = vec3(0.5, 0.5, 0.1);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
@@ -726,7 +726,7 @@ void onKeyboard(unsigned char key, int pX, int pY) {
 
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
 
-float weightCounter = 0.05;
+float weightCounter = 0.02;
 void onMouse(int button, int state, int pX, int pY) {
 	if (state) return;
 	pY = -1 * (pY - windowHeight);
@@ -737,7 +737,7 @@ void onMouse(int button, int state, int pX, int pY) {
 		vec3 tmp = ((GravitySheet*)scene.gravitySheetObject->geometry)->getNormal(vec2(normalizedX * 2 - 1, normalizedY * 2 - 1));
 	}
 	else {
-		weightCounter += 0.005;
+		weightCounter += 0.02;
 		scene.gravitySheetObject->addMass(Mass(weightCounter, vec2(normalizedX *2 -1, normalizedY * 2 -1)));
 	}
 }
