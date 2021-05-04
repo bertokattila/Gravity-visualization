@@ -98,13 +98,6 @@ public:
 		resultQuaternion.k = k1.k * k2.real + k2.k * k1.real + k1.i * k2.j - k1.j * k2.i;
 		return resultQuaternion;
 	}
-	static Quaternion inverse(Quaternion quaternion) {
-		return  Quaternion(quaternion.real / (abs(quaternion) * abs(quaternion)), (-quaternion.i) / (abs(quaternion) * abs(quaternion)), (-quaternion.j) / (abs(quaternion) * abs(quaternion)), (-quaternion.k) / (abs(quaternion) * abs(quaternion)));
-	}
-
-	static float abs(Quaternion quaternion) {
-		return sqrtf(powf(quaternion.real, 2) + powf(quaternion.i, 2) + powf(quaternion.j, 2) + powf(quaternion.k, 2));
-	}
 };
 
 struct Camera { 
@@ -612,7 +605,7 @@ public:
 		material0->kd = vec3(0.26f, 0.53f, 0.96f);
 		material0->ks = vec3(0, 0, 0);
 		material0->ka = vec3(0.1f, 0.1f, 0.1f);
-		material0->shininess = 10;
+		material0->shininess = 1;
 
 		Geometry* sphere = new Sphere();
 		Geometry* gravitySheet = new GravitySheet();
@@ -630,14 +623,14 @@ public:
 
 		lights.resize(2);
 		lights[0].wLightPos = vec4(0.5, 0.5, 0.2, 1);
-		lights[0].rotateAround = vec3(-0.5, 0, 1);
+		lights[0].rotateAround = vec3(-1, 0, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[0].Le = vec3(1.4, 1.4, 1.4);
+		lights[0].Le = vec3(2.4, 2.4, 2.4);
 		
-		lights[1].wLightPos = vec4(-0.5, 0, 1, 1);
+		lights[1].wLightPos = vec4(-1, 0, 1, 1);
 		lights[1].rotateAround = vec3(0.5, 0.5, 0.2);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[1].Le = vec3(0.4, 0.4, 0.4);
+		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
 		addNewSphere();
 	}
