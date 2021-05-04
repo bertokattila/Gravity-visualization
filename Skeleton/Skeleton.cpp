@@ -138,8 +138,7 @@ struct SceneCamera : Camera {
 public:
 	SceneCamera() {
 		asp = (float)windowWidth / windowHeight;
-		fov = 75.0f * (float)M_PI / 180.0f;
-		fp = 1; bp = 50;
+		fp = 0.5; bp = 100;
 	}
 	mat4 V() {
 		vec3 w = normalize(wEye - wLookat);
@@ -153,9 +152,9 @@ public:
 
 	mat4 P() {
 		return mat4(1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, -2 / (bp - fp), 0,
-			0, 0, 0, 1);
+					0, 1, 0, 0,
+					0, 0, -2 / (bp - fp), 0,
+					0, 0, 0, 1);
 	}
 };
 
@@ -180,11 +179,11 @@ struct Light {
 };
 
 struct RenderState {
-	mat4	           MVP, M, Minv, V, P;
+	mat4 MVP, M, Minv, V, P;
 	Material* material;
 	std::vector<Light> lights;
 	Texture* texture;
-	vec3	           wEye;
+	vec3 wEye;
 };
 
 class Shader : public GPUProgram {
@@ -612,7 +611,7 @@ public:
 		Material* material0 = new Material;
 		material0->kd = vec3(0.26f, 0.53f, 0.96f);
 		material0->ks = vec3(0, 0, 0);
-		material0->ka = vec3(0.5f, 0.5f, 0.5f);
+		material0->ka = vec3(0.1f, 0.1f, 0.1f);
 		material0->shininess = 10;
 
 		Geometry* sphere = new Sphere();
@@ -623,7 +622,7 @@ public:
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
 
-		camera.wEye = vec3(0, 0, 5);
+		camera.wEye = vec3(0, 0, 20);
 		camera.wLookat = vec3(0, 0, 0);
 		camera.wVup = vec3(0, 1, 0);
 
@@ -634,7 +633,7 @@ public:
 		lights[0].rotateAround = vec3(-0.5, 0, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(1.4, 1.4, 1.4);
-
+		
 		lights[1].wLightPos = vec4(-0.5, 0, 1, 1);
 		lights[1].rotateAround = vec3(0.5, 0.5, 0.2);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
