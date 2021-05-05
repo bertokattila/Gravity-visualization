@@ -59,7 +59,7 @@ template<class T> Dnum<T> Pow(Dnum<T> g, float n) {
 
 typedef Dnum<vec2> Dnum2;
 
-const int tessellationLevel = 200;
+const int tessellationLevel = 100;
 
 class Quaternion {
 	float real;
@@ -608,7 +608,7 @@ public:
 		gravitySheetObject->scale = vec3(1.0f, 1.0f, 1.0f);
 		objects.push_back(gravitySheetObject);
 
-		camera.wEye = vec3(0, 0, 30);
+		camera.wEye = vec3(0, 0, 40);
 		camera.wLookat = vec3(0, 0, 0);
 		camera.wVup = vec3(0, 1, 0);
 
