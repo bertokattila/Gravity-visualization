@@ -73,9 +73,7 @@ public:
 		this->j = j;
 		this->k = k;
 	}
-	Quaternion() {
-		
-	}
+	Quaternion() {}
 	Quaternion(vec4 q) {
 		this->real = q.w;
 		this->i = q.x;
@@ -84,10 +82,6 @@ public:
 	}
 	vec4 getVec4() {
 		return vec4(i, j, k, real);
-	}
-
-	void print() {
-		printf("real: %f \ni: %f \nj: %f\nk: %f ", real, i, j, k);
 	}
 
 	static Quaternion quaternionMult(Quaternion k1, Quaternion k2) {
@@ -106,7 +100,7 @@ struct Camera {
 public:
 	Camera() {
 		asp = (float)windowWidth / windowHeight;
-		fov = 75.0f * (float)M_PI / 180.0f;
+		fov = 90.0f * (float)M_PI / 180.0f;
 		fp = 0.01; bp = 10;
 	}
 	mat4 V() {
@@ -333,7 +327,7 @@ public:
 		glGenBuffers(1, &vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	}
-	virtual void Draw(Shader* shader, RenderState state ) = 0;
+	virtual void Draw(Shader* shader ) = 0;
 	~Geometry() {
 		glDeleteBuffers(1, &vbo);
 		glDeleteVertexArrays(1, &vao);
@@ -385,10 +379,8 @@ public:
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, texcoord));
 	}
 
-	void Draw(Shader* shader, RenderState state) {
-		shader->Bind(state);
+	void Draw(Shader* shader) {
 		shader->setUniform(true, "isGravitySheet");
-		
 		glBindVertexArray(vao);
 		for (unsigned int i = 0; i < nStrips; i++) glDrawArrays(GL_TRIANGLE_STRIP, i * nVtxPerStrip, nVtxPerStrip);
 		shader->setUniform(false, "isGravitySheet");
@@ -450,8 +442,8 @@ public:
 		}
 		return Z.f;
 	}
-	void Draw(Shader* shader, RenderState state) {
-		shader->Bind(state);
+	void Draw(Shader* shader) {
+		
 		glBindVertexArray(vao);
 		for (unsigned int i = 0; i < nStrips; i++) glDrawArrays(GL_TRIANGLE_STRIP, i * nVtxPerStrip, nVtxPerStrip);
 	}
@@ -486,7 +478,8 @@ public:
 		state.Minv = Minv;
 		state.MVP = state.M * state.V * state.P;
 		state.material = material;
-		geometry->Draw(shader, state);
+		shader->Bind(state);
+		geometry->Draw(shader);
 	}
 	virtual void Animate(float tstart, float tend) {}
 	virtual bool shouldBeRemoved() { return false; }
@@ -505,7 +498,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -5);
+vec3 gravity = vec3(0, 0, -7);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -575,7 +568,7 @@ struct SphereObject : public Object{
 	bool hasCameraAttached() {
 		return attachedCamera != NULL;
 	}
-	bool shouldBeRemoved() { return position.z < -2; }
+	bool shouldBeRemoved() { return position.z < -1.7; }
 	void attachCamera(Camera* camera) {
 		attachedCamera = camera;
 		attachedCamera->wEye = centerPosition;
@@ -696,7 +689,7 @@ public:
 		material->ka = vec3(0.1f, 0.1f, 0.1f);
 		material->shininess = 100;
 
-		SphereObject* sphereObject = new SphereObject(phongShader, material, sphere, vec3(0,0,0), vec3(0.05f, 0.05f, 0.05f), gravitySheetObject);
+		SphereObject* sphereObject = new SphereObject(phongShader, material, sphere, vec3(0,0,0), vec3(0.04f, 0.04f, 0.04f), gravitySheetObject);
 		sphereObject->translation = vec3(0, 0, 0);
 		
 		sphereObjectToStart = sphereObject;
