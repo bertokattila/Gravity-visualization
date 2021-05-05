@@ -497,7 +497,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -10);
+vec3 gravity = vec3(0, 0, -6);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
