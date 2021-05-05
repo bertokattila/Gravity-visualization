@@ -497,7 +497,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -8);
+vec3 gravity = vec3(0, 0, -9);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -614,15 +614,15 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(3, 3, 0.5, 1);
-		lights[0].startingPos = vec3(3, 3, 0.5);
+		lights[0].wLightPos = vec4(2, 2, 0.5, 1);
+		lights[0].startingPos = vec3(2, 2, 0.5);
 		lights[0].rotateAround = vec3(0.5, -0.5, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(1.6, 1.6, 1.6);
 		
 		lights[1].wLightPos = vec4(0.5, -0.5, 1, 1);
 		lights[1].startingPos = vec3(0.5, -0.5, 1);
-		lights[1].rotateAround = vec3(3, 3, 0.5);
+		lights[1].rotateAround = vec3(2, 2, 0.5);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
@@ -646,9 +646,15 @@ public:
 		for (Object* obj : objects) obj->Draw(state);
 	}
 	void switchCamera() {
-		((SphereObject*)objects.at(1))->attachCamera(&followerCamera);
-		sphereObjectCameraOwner = ((SphereObject*)objects.at(1));
-		followingSpere = true;
+		if (!followingSpere) {
+
+			((SphereObject*)objects.at(1))->attachCamera(&followerCamera);
+			sphereObjectCameraOwner = ((SphereObject*)objects.at(1));
+			followingSpere = true;
+		}
+		else {
+			followingSpere = false;
+		}
 	}
 
 	void Animate(float tstart, float tend) {
