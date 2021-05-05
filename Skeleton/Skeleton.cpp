@@ -152,16 +152,15 @@ struct Material {
 
 struct Light {
 	vec3 rotateAround;
+	vec3 startingPos;
 	vec3 La, Le;
 	vec4 wLightPos;
 	void animate(float t) {
-		Quaternion q = Quaternion(vec4(sinf(t / 4.0f) * cosf(t) / 2.0f, sinf(t / 4.0f) * sinf(t) / 2.0f, sinf(t / 4.0f) * sqrtf(3.0f / 4.0f), cosf(t / 4.0f)));
-		Quaternion qInv = Quaternion(vec4(-sinf(t / 4.0f) * cosf(t) / 2.0f, -sinf(t / 4.0f) * sinf(t) / 2.0f, -sinf(t / 4.0f) * sqrtf(3.0f / 4.0f), cosf(t / 4.0f)));
-		vec4 p = vec4(wLightPos.x - rotateAround.x, wLightPos.y - rotateAround.y, wLightPos.z - rotateAround.z, 0);
+		Quaternion q = Quaternion(vec4(cosf(t / 4.0f), sinf(t / 4.0f) * cosf(t) / 2.0f, sinf(t / 4.0f) * sinf(t) / 2.0f, sinf(t / 4.0f) * sqrtf(3.0f / 4.0f)));
+		Quaternion qInv = Quaternion(vec4(-cosf(t / 4.0f), -sinf(t / 4.0f) * cosf(t) / 2.0f, -sinf(t / 4.0f) * sinf(t) / 2.0f, sinf(t / 4.0f) * sqrtf(3.0f / 4.0f)));
+		vec4 p = vec4(startingPos.x - rotateAround.x, startingPos.y - rotateAround.y, startingPos.z - rotateAround.z, 0);
 		vec4 result = Quaternion::quaternionMult(Quaternion::quaternionMult(q, p), qInv).getVec4();
-		wLightPos.x = result.x + rotateAround.x;
-		wLightPos.y = result.y + rotateAround.y;
-		wLightPos.z = result.z + rotateAround.z;
+		wLightPos = result + vec4(rotateAround.x, rotateAround.y, rotateAround.z, 0);
 	}
 };
 
@@ -615,13 +614,15 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 0.1, 1);
+		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
+		lights[0].startingPos = vec3(0.5, 0.5, 1);
 		lights[0].rotateAround = vec3(-1, 0, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(1.4, 1.4, 1.4);
 		
 		lights[1].wLightPos = vec4(-1, 0, 1, 1);
-		lights[1].rotateAround = vec3(0.5, 0.5, 0.1);
+		lights[1].startingPos = vec3(-1, 0, 1);
+		lights[1].rotateAround = vec3(0.5, 0.5, 1);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
@@ -664,7 +665,7 @@ public:
 		}
 		for (int i = 0; i < lights.size(); i++)
 		{
-			lights.at(i).animate(tend - tstart);
+			lights.at(i).animate(tend);
 		}
 
 	}
