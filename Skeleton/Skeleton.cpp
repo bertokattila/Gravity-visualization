@@ -615,17 +615,17 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(4, 0, 0.5, 1);
-		lights[0].startingPos = vec3(4, 0, 0.5);
-		lights[0].rotateAround = vec3(1, 6, 1);
+		lights[0].wLightPos = vec4(-4, 0, 1, 0.5);
+		lights[0].startingPos = vec3(-4, 0, 0.5);
+		lights[0].rotateAround = vec3(1, 2, 0.5);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(2.6, 2.6, 2.6);
 		
-		lights[1].wLightPos = vec4(1, 6, 1, 1);
-		lights[1].startingPos = vec3(1, 6, 1);
-		lights[1].rotateAround = vec3(4, 0, 0.5);
+		lights[1].wLightPos = vec4(1, 2, 0.5, 1);
+		lights[1].startingPos = vec3(1, 2, 0.5);
+		lights[1].rotateAround = vec3(-4, 0, 0.5);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[1].Le = vec3(1.4, 1.4, 1.4);
+		lights[1].Le = vec3(1.0, 1.0, 1.0);
 		
 		addNewSphere();
 	}
@@ -646,16 +646,23 @@ public:
 		state.lights = lights;
 		for (Object* obj : objects) obj->Draw(state);
 	}
-	void switchCamera() {
-		if (!followingSpere) {
+	void switchCamera(bool space) {
+		if (space) {
+			if (!followingSpere) {
 
+				((SphereObject*)objects.at(1))->attachCamera(&followerCamera);
+				sphereObjectCameraOwner = ((SphereObject*)objects.at(1));
+				followingSpere = true;
+			}
+			else {
+				sphereObjectCameraOwner->removeCamera();
+				followingSpere = false;
+			}
+		}
+		else {
 			((SphereObject*)objects.at(1))->attachCamera(&followerCamera);
 			sphereObjectCameraOwner = ((SphereObject*)objects.at(1));
 			followingSpere = true;
-		}
-		else {
-			sphereObjectCameraOwner->removeCamera();
-			followingSpere = false;
 		}
 	}
 
@@ -667,7 +674,7 @@ public:
 				bool switchCameraB = false;
 				if (objects.at(i)->hasCameraAttached()) switchCameraB = true;
 				objects.erase(objects.begin() + i);
-				if (switchCameraB) switchCamera();
+				if (switchCameraB) switchCamera(false);
 			}
 			
 		}
@@ -723,7 +730,7 @@ void onDisplay() {
 }
 
 void onKeyboard(unsigned char key, int pX, int pY) { 
-	if (key == ' ') { scene.switchCamera();}
+	if (key == ' ') { scene.switchCamera(true);}
 }
 
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
