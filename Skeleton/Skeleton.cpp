@@ -497,7 +497,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -9);
+vec3 gravity = vec3(0, 0, -10);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -578,6 +578,7 @@ struct SphereObject : public Object{
 	}
 	void removeCamera() {
 		attachedCamera = NULL;
+		scale = vec3(0.04f, 0.04f, 0.04f);
 	}
 };
 
@@ -614,15 +615,15 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(2, 2, 0.5, 1);
-		lights[0].startingPos = vec3(2, 2, 0.5);
-		lights[0].rotateAround = vec3(0.5, -0.5, 1);
+		lights[0].wLightPos = vec4(4, 0, 0.5, 1);
+		lights[0].startingPos = vec3(4, 0, 0.5);
+		lights[0].rotateAround = vec3(1, 6, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[0].Le = vec3(1.6, 1.6, 1.6);
+		lights[0].Le = vec3(2.6, 2.6, 2.6);
 		
-		lights[1].wLightPos = vec4(0.5, -0.5, 1, 1);
-		lights[1].startingPos = vec3(0.5, -0.5, 1);
-		lights[1].rotateAround = vec3(2, 2, 0.5);
+		lights[1].wLightPos = vec4(1, 6, 1, 1);
+		lights[1].startingPos = vec3(1, 6, 1);
+		lights[1].rotateAround = vec3(4, 0, 0.5);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
@@ -653,6 +654,7 @@ public:
 			followingSpere = true;
 		}
 		else {
+			sphereObjectCameraOwner->removeCamera();
 			followingSpere = false;
 		}
 	}
