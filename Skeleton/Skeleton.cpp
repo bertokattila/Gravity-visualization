@@ -497,7 +497,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -7);
+vec3 gravity = vec3(0, 0, -8);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -614,15 +614,15 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
-		lights[0].startingPos = vec3(0.5, 0.5, 1);
-		lights[0].rotateAround = vec3(-1, 0, 1);
+		lights[0].wLightPos = vec4(1, 1, 2, 1);
+		lights[0].startingPos = vec3(1, 1, 2);
+		lights[0].rotateAround = vec3(-1, -1, 0.5);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[0].Le = vec3(1.4, 1.4, 1.4);
+		lights[0].Le = vec3(1.6, 1.6, 1.6);
 		
-		lights[1].wLightPos = vec4(-1, 0, 1, 1);
-		lights[1].startingPos = vec3(-1, 0, 1);
-		lights[1].rotateAround = vec3(0.5, 0.5, 1);
+		lights[1].wLightPos = vec4(-1, -1, 0.5, 1);
+		lights[1].startingPos = vec3(-1, -1, 0.5);
+		lights[1].rotateAround = vec3(1, 1, 2);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
