@@ -160,7 +160,7 @@ struct Light {
 		Quaternion qInv = Quaternion(vec4(-cosf(t / 4.0f), -sinf(t / 4.0f) * cosf(t) / 2.0f, -sinf(t / 4.0f) * sinf(t) / 2.0f, sinf(t / 4.0f) * sqrtf(3.0f / 4.0f)));
 		vec4 p = vec4(startingPos.x - rotateAround.x, startingPos.y - rotateAround.y, startingPos.z - rotateAround.z, 0);
 		vec4 result = Quaternion::quaternionMult(Quaternion::quaternionMult(q, p), qInv).getVec4();
-		wLightPos = result + vec4(rotateAround.x, rotateAround.y, rotateAround.z, 0);
+		wLightPos = result + vec4(rotateAround.x, rotateAround.y, rotateAround.z, 1);
 	}
 };
 
@@ -594,10 +594,10 @@ public:
 		Shader* phongShader = new PhongShader();
 
 		Material* material0 = new Material;
-		material0->kd = vec3(0.26f, 0.53f, 0.96f);
+		material0->kd = vec3(0.26f, 0.53f, 0.96f) * 0.6;
 		material0->ks = vec3(0, 0, 0);
 		material0->ka = vec3(0.1f, 0.1f, 0.1f);
-		material0->shininess = 1;
+		material0->shininess = 10;
 
 		Geometry* sphere = new Sphere();
 		Geometry* gravitySheet = new GravitySheet();
@@ -614,15 +614,15 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(1, 1, 2, 1);
-		lights[0].startingPos = vec3(1, 1, 2);
-		lights[0].rotateAround = vec3(-1, -1, 0.5);
+		lights[0].wLightPos = vec4(3, 3, 0.5, 1);
+		lights[0].startingPos = vec3(3, 3, 0.5);
+		lights[0].rotateAround = vec3(0.5, -0.5, 1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[0].Le = vec3(1.6, 1.6, 1.6);
 		
-		lights[1].wLightPos = vec4(-1, -1, 0.5, 1);
-		lights[1].startingPos = vec3(-1, -1, 0.5);
-		lights[1].rotateAround = vec3(1, 1, 2);
+		lights[1].wLightPos = vec4(0.5, -0.5, 1, 1);
+		lights[1].startingPos = vec3(0.5, -0.5, 1);
+		lights[1].rotateAround = vec3(3, 3, 0.5);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
 		lights[1].Le = vec3(1.4, 1.4, 1.4);
 		
