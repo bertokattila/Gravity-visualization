@@ -262,10 +262,10 @@ class PhongShader : public Shader {
 			float discreteDarkness = 1;
 			if(isGravitySheet == 0){
 				
-				if (zCoord < -0.7) {
+				if (zCoord < -0.6) {
 					if (zCoord < -1) {
 						if (zCoord < -1.5) {
-							if (zCoord < -2) {
+							if (zCoord < -2.5) {
 								discreteDarkness = 0;
 							}
 							else {
@@ -536,7 +536,7 @@ struct SphereObject : public Object{
 			if (attachedCamera != NULL) {
 				vec3 normalizedVelocity = normalize(velocity);
 				attachedCamera->wEye = centerPosition;
-				attachedCamera->wLookat = centerPosition + vec3(normalizedVelocity.x, normalizedVelocity.y, normalizedVelocity.z);
+				attachedCamera->wLookat = centerPosition + normalizedVelocity;
 				attachedCamera->wVup = positionNormal;
 			}
 			
