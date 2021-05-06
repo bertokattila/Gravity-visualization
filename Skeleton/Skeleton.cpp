@@ -497,7 +497,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -9);
+vec3 gravity = vec3(0, 0, -10);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -742,7 +742,7 @@ void onMouse(int button, int state, int pX, int pY) {
 	float normalizedX = (float)pX / (float)windowWidth;
 	float normalizedY = (float)pY / (float)windowHeight;
 	if (!button) {
-		scene.startNewSphere(vec3(normalizedX, normalizedY, 0) * 1.25);
+		scene.startNewSphere(vec3(normalizedX, normalizedY, 0));
 		vec3 tmp = ((GravitySheet*)scene.gravitySheetObject->geometry)->getNormal(vec2(normalizedX * 2 - 1, normalizedY * 2 - 1));
 	}
 	else {
