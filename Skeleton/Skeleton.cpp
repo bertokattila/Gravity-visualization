@@ -497,7 +497,7 @@ struct GravitySheetObject : public Object {
 	}
 	bool shouldBeRemoved() { return false; }
 };
-vec3 gravity = vec3(0, 0, -6);
+vec3 gravity = vec3(0, 0, -9);
 struct SphereObject : public Object{
 	vec3 position = vec3(-1, -1, 0);
 	vec3 centerPosition = vec3(0, 0, 0);
@@ -595,7 +595,7 @@ public:
 		Shader* phongShader = new PhongShader();
 
 		Material* material0 = new Material;
-		material0->kd = vec3(0.26f, 0.53f, 0.96f) * 0.6;
+		material0->kd = vec3(0.26f, 0.53f, 0.96f) ;
 		material0->ks = vec3(0, 0, 0);
 		material0->ka = vec3(0.1f, 0.1f, 0.1f);
 		material0->shininess = 10;
@@ -615,17 +615,17 @@ public:
 		followerCamera.wVup = vec3(0, 0, 1);
 
 		lights.resize(2);
-		lights[0].wLightPos = vec4(-4, 0, 1, 0.5);
-		lights[0].startingPos = vec3(-4, 0, 0.5);
-		lights[0].rotateAround = vec3(1, 2, 0.5);
+		lights[0].wLightPos = vec4(0.5, 0.5, 1, 1);
+		lights[0].startingPos = vec3(0.5, 0.5, 1);
+		lights[0].rotateAround = vec3(1, -1, 0.1);
 		lights[0].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[0].Le = vec3(2.6, 2.6, 2.6);
+		lights[0].Le = vec3(0.6, 0.6, 0.6);
 		
-		lights[1].wLightPos = vec4(1, 2, 0.5, 1);
-		lights[1].startingPos = vec3(1, 2, 0.5);
-		lights[1].rotateAround = vec3(-4, 0, 0.5);
+		lights[1].wLightPos = vec4(1, -1, 0.1, 1);
+		lights[1].startingPos = vec3(1, -1, 0.1);
+		lights[1].rotateAround = vec3(0.5, 0.5, 1);
 		lights[1].La = vec3(0.1f, 0.1f, 0.1f);
-		lights[1].Le = vec3(1.0, 1.0, 1.0);
+		lights[1].Le = vec3(2.0, 2.0, 2.0);
 		
 		addNewSphere();
 	}
@@ -742,7 +742,7 @@ void onMouse(int button, int state, int pX, int pY) {
 	float normalizedX = (float)pX / (float)windowWidth;
 	float normalizedY = (float)pY / (float)windowHeight;
 	if (!button) {
-		scene.startNewSphere(vec3(normalizedX, normalizedY, 0));
+		scene.startNewSphere(vec3(normalizedX, normalizedY, 0) * 1.25);
 		vec3 tmp = ((GravitySheet*)scene.gravitySheetObject->geometry)->getNormal(vec2(normalizedX * 2 - 1, normalizedY * 2 - 1));
 	}
 	else {
